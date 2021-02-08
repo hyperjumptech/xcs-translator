@@ -4,8 +4,7 @@
   "description": "Excel to CSV to SQL",
   "main": "build/index.js",
   "scripts": {
-    "start": "npm run build && node build/index.js",
-    "build": "cross-env NODE_ENV=production tsc",
+    "start": "tsc && cross-env NODE_ENV=production node build/index.js",
     "dev": "tsnd --respawn src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format-code": "prettier --write \"src/**/*.{js,ts,json,css,scss}\""
