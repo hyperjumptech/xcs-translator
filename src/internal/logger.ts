@@ -28,4 +28,4 @@ export const expressErrorLogger = expressWinston.errorLogger({
 })
 
 export const logger = winston.createLogger(options)
-logger.debug('  Logging initialized at debug level')
+logger.debug('Logging initialized at debug level')
