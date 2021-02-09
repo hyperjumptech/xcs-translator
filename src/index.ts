@@ -1,6 +1,8 @@
 import express from 'express'
 import * as http from 'http'
-import { logger } from './utils/logger'
+import { logger } from './internal/logger'
+import errorHandler from './internal/middleware/error-handler'
+import uploads from './service/uploads'
 
 import { cfg } from './config'
 
@@ -8,6 +10,12 @@ const app = express()
 const port = cfg.port
 
 app.use(express.static('public'))
+
+app.get('/health', (_, res) => {
+  res.status(200).json({ alive: true })
+})
+app.use(uploads)
+app.use(errorHandler())
 
 let server: http.Server
 ;(async () => {
