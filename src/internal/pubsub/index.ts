@@ -24,6 +24,4 @@ export default class PubSub {
   subscribe(topic: string, listener: (data: any) => void): void {
     this.emitter.on(topic, listener)
   }
-    this.emitter.on(topic, data)
-  }
 }
