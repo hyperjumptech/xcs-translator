@@ -21,7 +21,9 @@ export default class PubSub {
     return eventID
   }
 
-  subscribe(topic: string, data: any): void {
+  subscribe(topic: string, listener: (data: any) => void): void {
+    this.emitter.on(topic, listener)
+  }
     this.emitter.on(topic, data)
   }
 }
