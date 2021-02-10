@@ -92,14 +92,14 @@ function upload(url, formData, { onSuccess, onError, onProgress }) {
     }
   }
   xhr.onerror = () => onError(new Error('Something wrong happened'))
-  xhr.onprogress = () => {
-    const percentage = (xhr.loaded / xhr.total) * 100
+  xhr.upload.onprogress = event => {
+    const percentage = (event.loaded / event.total) * 100
     onProgress(percentage)
   }
   xhr.onabort = () => {
     console.error('Upload cancelled.')
   }
 
-  xhr.open('POST', url)
+  xhr.open('POST', url, true)
   xhr.send(formData)
 }
