@@ -1,11 +1,14 @@
 import fs from 'fs'
 import path from 'path'
+import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
+import { logger } from '../../internal/logger'
 import { convertFromFilePath } from '../../internal/xlsToCsv'
 
 const pubsub = new PubSub()
+const rename = promisify(fs.rename)
 
 export function upload(req: Request, res: Response, next: NextFunction) {
   if (!req.file) {
@@ -26,30 +29,51 @@ export function upload(req: Request, res: Response, next: NextFunction) {
 
 pubsub.subscribe('fileUploaded', async ({ message, _ }: any) => {
   const { filePath, correlationID } = message
+  const getFileName = (filePath: string) => {
+    const splitFileName = filePath.split('/')
+    const fileName = splitFileName[splitFileName.length - 1]
+
+    return fileName
+  }
+  const removeExtension = (fileName: string) => {
+    const splitFileName = fileName.split('.')
+    const fileNameWithoutExtension = splitFileName.filter(
+      (_, index) => index !== splitFileName.length - 1,
+    )
+
+    return fileNameWithoutExtension
+  }
+  const fileName = getFileName(filePath)
+  const csvFileName = removeExtension(fileName)
 
   try {
     // convert excel to csv
     convertFromFilePath(
       filePath,
-      path.join(__dirname, `../../storage/csv/${correlationID}.csv`),
+      path.join(__dirname, `../../storage/csv/${csvFileName}.csv`),
     )
 
-    // remove excel file
-    fs.unlinkSync(filePath)
+    // move excel file to archive directory
+    await rename(
+      filePath,
+      path.join(__dirname, `../../storage/excel/archive/${fileName}`),
+    )
   } catch (err) {
-    console.error(`Process with correlation id: ${correlationID}: ${err}`)
+    logger.error(
+      `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
+    )
   }
 
   pubsub.publish('convertedToCSV', { correlationID })
 })
 
-pubsub.subscribe('convertedToCSV', ({ message, context }: any) => {
-  // To do: Convert to sql, delete csv file
+pubsub.subscribe('convertedToCSV', ({ message, _ }: any) => {
+  // To do: Convert to sql, archive csv file
   const { correlationID } = message
   pubsub.publish('convertedToSQL', { correlationID })
 })
 
 pubsub.subscribe('convertedToSQL', ({ message, _ }: any) => {
   const { correlationID } = message
-  console.info(`correlation ID: ${correlationID} is done`)
+  logger.info(`correlation ID: ${correlationID} is done`)
 })
