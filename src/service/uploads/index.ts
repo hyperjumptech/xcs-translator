@@ -14,11 +14,29 @@ const storage = multer.diskStorage({
   destination: (_, __, cb) =>
     cb(null, path.join(__dirname, '../../storage/excel')),
   filename: (req, file, cb) => {
+    const getTimestamp = () => {
+      const date = new Date()
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hour = String(date.getHours()).padStart(2, '0')
+      const minute = String(date.getMinutes()).padStart(2, '0')
+      const second = String(date.getSeconds()).padStart(2, '0')
+      const timestamp = `${year}-${month}-${day}T${hour}:${minute}:${second}`
+
+      return timestamp
+    }
+    const getFileExtension = (fileName: string) => {
+      const splitFileName = fileName.split('.')
+      const extension = splitFileName[splitFileName.length - 1]
+
+      return extension
+    }
     const correlationID = uuidv4()
-    const fileName = `${correlationID}-${file.originalname
-      .toLowerCase()
-      .split(' ')
-      .join('-')}`
+    const timestamp = getTimestamp()
+    const extension = getFileExtension(file.originalname)
+    // To do: add sha1 to filename
+    const fileName = `${correlationID};${timestamp}.${extension}`
 
     // add header to track process from file name
     req.headers['x-correlation-id'] = correlationID
