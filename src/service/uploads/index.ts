@@ -1,6 +1,7 @@
 import path from 'path'
 import { Router } from 'express'
 import multer from 'multer'
+import crypto from 'crypto'
 import { object, string } from 'joi'
 import { v4 as uuidv4 } from 'uuid'
 import validate from '../../internal/middleware/validator'
@@ -35,9 +36,11 @@ const storage = multer.diskStorage({
     const correlationID = uuidv4()
     const timestamp = getTimestamp()
     const extension = getFileExtension(file.originalname)
-    // To do: add sha1 to filename
-    const fileName = `${correlationID};${timestamp}.${extension}`
-
+    const sha1 = crypto
+      .createHash('sha1')
+      .update(file.originalname)
+      .digest('hex')
+    const fileName = `${correlationID};${sha1};${timestamp}.${extension}`
     // add header to track process from file name
     req.headers['x-correlation-id'] = correlationID
 
