@@ -6,6 +6,7 @@ import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { convertFromFilePath } from '../../internal/xlsToCsv'
+import { sheetConfig } from '../../config'
 
 const pubsub = new PubSub()
 const rename = promisify(fs.rename)
@@ -48,10 +49,16 @@ pubsub.subscribe('fileUploaded', async ({ message, _ }: any) => {
 
   try {
     // convert excel to csv
-    convertFromFilePath(
-      filePath,
-      path.join(__dirname, `../../storage/csv/${csvFileName}.csv`),
-    )
+    convertFromFilePath(filePath, {
+      columns: sheetConfig.original.columns,
+      destinations: sheetConfig.converted.map(val => ({
+        columns: val.columns,
+        filepath: path.join(
+          __dirname,
+          `../../storage/csv/${csvFileName}-${val.type}.csv`,
+        ),
+      })),
+    })
 
     // move excel file to archive directory
     await rename(
