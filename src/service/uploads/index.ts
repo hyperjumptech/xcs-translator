@@ -1,14 +1,12 @@
+import path from 'path'
 import { Router } from 'express'
 import multer from 'multer'
-import path from 'path'
 import { object, string } from 'joi'
 import { v4 as uuidv4 } from 'uuid'
 import validate from '../../internal/middleware/validator'
-import PubSub from '../../internal/pubsub'
-import { AppError, commonHTTPErrors } from '../../internal/app-error'
+import { upload } from './handler'
 
 const router = Router()
-const pubsub = new PubSub()
 const validator = object({
   type: string().required().valid('antigen', 'pcr').label('Tipe Spesimen'),
 })
@@ -16,11 +14,29 @@ const storage = multer.diskStorage({
   destination: (_, __, cb) =>
     cb(null, path.join(__dirname, '../../storage/excel')),
   filename: (req, file, cb) => {
+    const getTimestamp = () => {
+      const date = new Date()
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hour = String(date.getHours()).padStart(2, '0')
+      const minute = String(date.getMinutes()).padStart(2, '0')
+      const second = String(date.getSeconds()).padStart(2, '0')
+      const timestamp = `${year}-${month}-${day}T${hour}:${minute}:${second}`
+
+      return timestamp
+    }
+    const getFileExtension = (fileName: string) => {
+      const splitFileName = fileName.split('.')
+      const extension = splitFileName[splitFileName.length - 1]
+
+      return extension
+    }
     const correlationID = uuidv4()
-    const fileName = `${correlationID}-${file.originalname
-      .toLowerCase()
-      .split(' ')
-      .join('-')}`
+    const timestamp = getTimestamp()
+    const extension = getFileExtension(file.originalname)
+    // To do: add sha1 to filename
+    const fileName = `${correlationID};${timestamp}.${extension}`
 
     // add header to track process from file name
     req.headers['x-correlation-id'] = correlationID
@@ -45,39 +61,7 @@ router.post(
   '/api/v1/uploads',
   multer({ storage, fileFilter }).single('file'),
   validate(validator),
-  (req, res, next) => {
-    if (!req.file) {
-      const err = new AppError(
-        commonHTTPErrors.badRequest,
-        'File is required',
-        true,
-      )
-      next(err)
-      return
-    }
-
-    const correlationID = req.headers['x-correlation-id']
-    pubsub.publish('fileUploaded', { filePath: req.file.path, correlationID })
-
-    res.status(202).send({ correlationID })
-  },
+  upload,
 )
-
-pubsub.subscribe('fileUploaded', ({ message, context }: any) => {
-  // To do: Convert to csv, delete excel file
-  const { correlationID } = message
-  pubsub.publish('convertedToCSV', { correlationID })
-})
-
-pubsub.subscribe('convertedToCSV', ({ message, context }: any) => {
-  // To do: Convert to sql, delete csv file
-  const { correlationID } = message
-  pubsub.publish('convertedToSQL', { correlationID })
-})
-
-pubsub.subscribe('convertedToSQL', ({ message, _ }: any) => {
-  const { correlationID } = message
-  console.info(`correlation ID: ${correlationID} is done`)
-})
 
 export default router
