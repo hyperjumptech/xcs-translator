@@ -55,7 +55,7 @@ pubsub.subscribe('fileUploaded', async ({ message, _ }: any) => {
         columns: val.columns,
         filePath: path.join(
           __dirname,
-          `../../storage/csv/${csvFileName}-${val.name}.csv`,
+          `../../storage/csv/${val.name}/${csvFileName}.csv`,
         ),
       })),
     )
