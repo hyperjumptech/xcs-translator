@@ -1,10 +1,10 @@
 interface SheetConfig {
-  original: { columns: string[] }
-  converted: { type: string; columns: string[] }[]
+  source: { columns: string[] }
+  destinations: { name: string; columns: string[] }[]
 }
 
 export const sheetConfig: SheetConfig = {
-  original: {
+  source: {
     columns: [
       'no',
       'nama',
@@ -46,9 +46,9 @@ export const sheetConfig: SheetConfig = {
       'created_date',
     ],
   },
-  converted: [
+  destinations: [
     {
-      type: 'patient',
+      name: 'patient',
       columns: [
         'nama',
         'jns_identitas',
@@ -81,7 +81,7 @@ export const sheetConfig: SheetConfig = {
       ],
     },
     {
-      type: 'specimen',
+      name: 'specimen',
       columns: [
         'jns_identitas',
         'nik',

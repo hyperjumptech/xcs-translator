@@ -1,23 +1,25 @@
 import fs from 'fs'
 import { readFile, utils } from 'xlsx'
 
+type SheetFile = {
+  filePath: string
+  columns: string[]
+}
+
 export function convertFromFilePath(
-  filepath: string,
-  options: {
-    columns: string[]
-    destinations: { columns: string[]; filepath: string }[]
-  },
+  source: SheetFile,
+  destinations: SheetFile[],
 ) {
-  const workbook = readFile(filepath)
+  const workbook = readFile(source.filePath)
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
 
   const json = utils.sheet_to_json(worksheet, {
     range: 1,
-    header: options.columns,
+    header: source.columns,
   })
 
-  for (let { columns, filepath } of options.destinations) {
+  for (let { columns, filePath } of destinations) {
     const data = json.map((record: any) => {
       let filtered: Record<string, unknown> = {}
       for (let col of columns) {
@@ -26,7 +28,7 @@ export function convertFromFilePath(
       return filtered
     })
 
-    const writeStream = fs.createWriteStream(filepath)
+    const writeStream = fs.createWriteStream(filePath)
 
     data.forEach(record => {
       const row = Object.values(record).join(',') + '\n'

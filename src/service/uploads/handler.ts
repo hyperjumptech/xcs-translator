@@ -49,16 +49,16 @@ pubsub.subscribe('fileUploaded', async ({ message, _ }: any) => {
 
   try {
     // convert excel to csv
-    convertFromFilePath(filePath, {
-      columns: sheetConfig.original.columns,
-      destinations: sheetConfig.converted.map(val => ({
+    convertFromFilePath(
+      { filePath, columns: sheetConfig.source.columns },
+      sheetConfig.destinations.map(val => ({
         columns: val.columns,
-        filepath: path.join(
+        filePath: path.join(
           __dirname,
-          `../../storage/csv/${csvFileName}-${val.type}.csv`,
+          `../../storage/csv/${csvFileName}-${val.name}.csv`,
         ),
       })),
-    })
+    )
 
     // move excel file to archive directory
     await rename(
