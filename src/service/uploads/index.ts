@@ -59,7 +59,7 @@ const storage = multer.diskStorage({
 
 function validateHash(sha1: string): Boolean {
   let result = true
-  const archiveFolder = path.join(__dirname, '../../storage/excel/archive/')
+  const archiveFolder = path.join(__dirname, '../../storage/archive/excel/')
   const filenames = fs.readdirSync(archiveFolder, { withFileTypes: true })
 
   for (let file of filenames) {
