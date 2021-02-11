@@ -136,16 +136,17 @@ pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
     )
     const getTableName = (
       pcrOrAntigen: string,
-      patientOrSpeciment: string,
+      patientOrSpecimen: string,
     ): string => {
-      switch (patientOrSpeciment) {
-        case 'patient':
-          return `dt_${pcrOrAntigen}_pasien`
-        case 'specimen':
-          return `dt_${pcrOrAntigen}_sampel`
-        default:
-          return ''
-      }
+      if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'patient')
+        return 'dt_litbang_new'
+      else if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'specimen')
+        return 'dt_litbang_sampel'
+      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'patient')
+        return 'dt_antigen_pasien'
+      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'specimen')
+        return 'dt_antigen_sampel'
+      else return ''
     }
 
     // write convert json to sql
