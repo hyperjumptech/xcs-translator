@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const sha1 = crypto
       .createHash('sha1')
-      .update(file.originalname)
+      .update(String(file.buffer))
       .digest('hex')
     const valid = validateHash(sha1)
 
