@@ -9,3 +9,7 @@
 
 - `npm start`
 - server is running in configured port (default to 8080)
+
+## Clear archive directory
+
+- `npm run clear-archive`
