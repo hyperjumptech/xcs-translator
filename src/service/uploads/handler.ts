@@ -8,10 +8,12 @@ import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { letterRangeToArrayOfIndex } from '../../internal/rangeConverter'
 import { sheetConfig } from '../../config'
+import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
 const rename = promisify(fs.rename)
 const writeFile = promisify(fs.writeFile)
+const fsReadFile = promisify(fs.readFile)
 
 export function upload(req: Request, res: Response, next: NextFunction) {
   const correlationID = req.headers['x-correlation-id']
@@ -35,7 +37,7 @@ export function upload(req: Request, res: Response, next: NextFunction) {
   res.status(202).send({ correlationID })
 }
 
-// excel to sql worker
+// excel to json worker
 pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
@@ -54,14 +56,19 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const { destinations } = sheetConfig[type as string]
   const mappedData = json.map(record => {
     const data: any = {}
-    for (let { columnRange, columnNames, kind } of destinations) {
+    for (let { columnRange, columns, kind } of destinations) {
       const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
       const values = dataColumnIndices.map(
         index => (record as any[])[index] || null,
       )
       let object: Record<string, unknown> = {}
-      columnNames.forEach((col, index) => {
-        object[col] = values[index]
+      columns.forEach((column, index) => {
+        const columnName = column.name
+        const columnType = column.type
+        const isInteger = columnType === 'int'
+        const value = normalizeDataType(values[index], isInteger)
+
+        object[columnName] = value
       })
       data[kind] = object
     }
@@ -69,28 +76,30 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     return data
   })
 
-  // generate sql statement
-  const sqlStatements = mappedData.map((data: any) => {
-    const sqlStatement = Object.keys(data).map(kind => {
-      const value = data[kind]
-      const tableName = getTableName(type, kind)
-      const tableColumns = Object.keys(value).join(', ')
-      const tableValues = Object.values(value)
-        .map(value => `'${value}'`)
-        .join(', ')
-
-      return `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
-    })
-
-    return sqlStatement
-  })
-
-  // write sql statement
-  const filePathSQL = path.join(
+  // write json file
+  const filePathJSON = path.join(
     __dirname,
-    `../../storage/${type}/sql/${fileName}.json`,
+    `../../storage/${type}/json/${fileName}.json`,
   )
-  await writeFile(filePathSQL, JSON.stringify(sqlStatements, null, 2))
+  await writeFile(
+    filePathJSON,
+    JSON.stringify(
+      mappedData,
+      (key, value) => {
+        if (typeof value === 'undefined') {
+          // TODO: Remove hardcode
+          if (key === 'modified_date') {
+            return new Date().toISOString().slice(0, 19).replace('T', ' ')
+          }
+
+          return ' '
+        }
+
+        return value
+      },
+      2,
+    ),
+  )
 
   // move excel file to archive directory
   try {
@@ -104,33 +113,68 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     )
   }
 
-  pubsub.publish('onConvertedToSQL', {
-    filePath: filePathSQL,
+  pubsub.publish('onConvertedToJSON', {
+    filePath: filePathJSON,
     type, // pcr or antigen
     correlationID,
   })
 })
 
-// execute statement worker
-pubsub.subscribe('onConvertedToSQL', async ({ message, _ }: any) => {
+// execute sql statement worker
+pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
+  let conn: any
 
   try {
-    // TODO: Execute SQL statement
+    conn = await getConnection(type)
+    const sqlStatementsFile = await fsReadFile(filePath)
+    const mappedData = JSON.parse(String(sqlStatementsFile))
 
-    // move sql statement file to archive directory
+    // generate sql statement
+    mappedData.forEach(async (data: any) => {
+      const kinds = Object.keys(data)
+      const firstKind = kinds[0]
+      const value = data[firstKind]
+      const tableName = getTableName(type, firstKind)
+      const tableColumns = Object.keys(value).join(', ')
+      const tableValues = Object.values(value).map(normalizeSQLValue).join(', ')
+      const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
+      const secondKind = kinds[1]
+      const secondValue = data[secondKind]
+      const secondTableName = getTableName(type, secondKind)
+      const secondTableColumns = Object.keys(secondValue).join(', ')
+      const secondTableValues = Object.values(secondValue)
+        .map(normalizeSQLValue)
+        .join(', ')
+
+      try {
+        // TODO: Remove hardcode
+        const res = await conn.query(query)
+        const id_pasien = res.insertId
+        const foreignKeyName =
+          type === 'antigen' ? 'id_pasien' : 'id_pemeriksaan'
+        const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
+        await conn.query(secondQuery)
+      } catch (err) {
+        logger.error(err.message)
+      }
+    })
+
+    // move json statement file to archive directory
     await rename(
       filePath,
       path.join(
         __dirname,
-        `../../storage/${type}/archive/sql/${fileName}.json`,
+        `../../storage/${type}/archive/json/${fileName}.json`,
       ),
     )
   } catch (err) {
     logger.error(
       `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
     )
+  } finally {
+    if (conn) return conn.release()
   }
 
   logger.info(`correlation ID: ${correlationID} is done`)
@@ -152,7 +196,20 @@ function removeExtension(fileName: string): string[] {
   return fileNameWithoutExtension
 }
 
+function normalizeDataType(value: any, isInteger: boolean): any {
+  if (isInteger) {
+    if (!value) {
+      return 0
+    }
+
+    return parseInt(value, 10)
+  }
+
+  return value
+}
+
 function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
+  // TODO: Remove hardcode
   const isAntigen = pcrOrAntigen === 'antigen'
   const isPCR = pcrOrAntigen === 'pcr'
   const isPatient = patientOrSpecimen === 'patient'
@@ -168,4 +225,12 @@ function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
   if (isAntigenSpecimen) return 'dt_antigen_sampel'
 
   return ''
+}
+
+function normalizeSQLValue(value: any): string {
+  if (typeof value === 'number' || value === 'boolean') {
+    return value
+  }
+
+  return `'${value}'`
 }
