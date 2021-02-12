@@ -14,19 +14,20 @@ const validator = object({
   type: string().required().valid('antigen', 'pcr').label('Tipe Spesimen'),
 })
 const storage = multer.diskStorage({
-  destination: (_, __, cb) =>
-    cb(null, path.join(__dirname, '../../storage/excel')),
+  destination: (req, __, cb) => {
+    cb(null, path.join(__dirname, `../../storage/${req?.body?.type}/excel`))
+  },
   filename: (req, file, cb) => {
     const sha1 = crypto
       .createHash('sha1')
       .update(String(file.buffer))
       .digest('hex')
-    const valid = validateHash(sha1)
+    const valid = validateHash(sha1, req?.body?.type)
 
     if (!valid) {
       const err = new AppError(
         commonHTTPErrors.badRequest,
-        'Found duplicate file!',
+        'File is already uploaded !',
         true,
       )
       cb(err, file.originalname)
@@ -63,9 +64,12 @@ const storage = multer.diskStorage({
   },
 })
 
-function validateHash(sha1: string): Boolean {
+function validateHash(sha1: string, type: string): Boolean {
   let result = true
-  const archiveFolder = path.join(__dirname, '../../storage/archive/excel/')
+  const archiveFolder = path.join(
+    __dirname,
+    `../../storage/${type}/archive/excel/`,
+  )
   const filenames = fs.readdirSync(archiveFolder, { withFileTypes: true })
 
   for (let file of filenames) {

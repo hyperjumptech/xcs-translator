@@ -12,9 +12,10 @@ import { sheetConfig } from '../../config'
 const pubsub = new PubSub()
 const rename = promisify(fs.rename)
 const writeFile = promisify(fs.writeFile)
-const fsReadFile = promisify(fs.readFile)
 
 export function upload(req: Request, res: Response, next: NextFunction) {
+  const correlationID = req.headers['x-correlation-id']
+
   if (!req.file) {
     const err = new AppError(
       commonHTTPErrors.badRequest,
@@ -25,7 +26,6 @@ export function upload(req: Request, res: Response, next: NextFunction) {
     return
   }
 
-  const correlationID = req.headers['x-correlation-id']
   pubsub.publish('onFileUploaded', {
     filePath: req.file.path,
     type: req.body['type'],
@@ -35,42 +35,27 @@ export function upload(req: Request, res: Response, next: NextFunction) {
   res.status(202).send({ correlationID })
 }
 
-// excel to csv worker
+// excel to sql worker
 pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const { filePath, type, correlationID } = message
-  const getFileName = (filePath: string) => {
-    const splitFileName = filePath.split('/')
-    const fileName = splitFileName[splitFileName.length - 1]
+  const fileName = removeExtension(getFileName(filePath))
 
-    return fileName
-  }
-  const removeExtension = (fileName: string) => {
-    const splitFileName = fileName.split('.')
-    const fileNameWithoutExtension = splitFileName.filter(
-      (_, index) => index !== splitFileName.length - 1,
-    )
-
-    return fileNameWithoutExtension
-  }
-  const fileName = getFileName(filePath)
-  const csvFileName = removeExtension(fileName)
-
-  // convert excel to json
+  // read excel and convert to json
   const workbook = readFile(filePath)
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
   const json = utils.sheet_to_json(worksheet, {
     range: 1,
     header: 1,
+    blankrows: false,
   })
 
+  // map json with database column
   const { destinations } = sheetConfig[type as string]
-
-  // convert json to csv
-  for (let { columnRange, columnNames, kind } of destinations) {
-    const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
-
-    const data = json.map(record => {
+  const mappedData = json.map(record => {
+    const data: any = {}
+    for (let { columnRange, columnNames, kind } of destinations) {
+      const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
       const values = dataColumnIndices.map(
         index => (record as any[])[index] || null,
       )
@@ -78,110 +63,68 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
       columnNames.forEach((col, index) => {
         object[col] = values[index]
       })
-      return object
+      data[kind] = object
+    }
+
+    return data
+  })
+
+  // generate sql statement
+  const sqlStatements = mappedData.map((data: any) => {
+    const sqlStatement = Object.keys(data).map(kind => {
+      const value = data[kind]
+      const tableName = getTableName(type, kind)
+      const tableColumns = Object.keys(value).join(', ')
+      const tableValues = Object.values(value)
+        .map(value => `'${value}'`)
+        .join(', ')
+
+      return `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
     })
 
-    // write json file
-    await writeFile(
-      path.join(__dirname, `../../storage/json/${kind}/${csvFileName}.json`),
-      JSON.stringify(data, null, 2),
-    )
+    return sqlStatement
+  })
 
-    // write csv file
-    const writeStream = fs.createWriteStream(
-      path.join(__dirname, `../../storage/csv/${kind}/${csvFileName}.csv`),
-    )
-    data.forEach((record: any) => {
-      const row = Object.values(record).join(',') + '\n'
-      writeStream.write(row)
-    })
-    writeStream.end()
+  // write sql statement
+  const filePathSQL = path.join(
+    __dirname,
+    `../../storage/${type}/sql/${fileName}.json`,
+  )
+  await writeFile(filePathSQL, JSON.stringify(sqlStatements, null, 2))
 
-    pubsub.publish('onConvertedToCSV', {
-      csvFileName,
-      type, // pcr or antigen
-      kind, // patient or specimen
-      correlationID,
-    })
-  }
-
+  // move excel file to archive directory
   try {
-    // move excel file to archive directory
     await rename(
       filePath,
-      path.join(__dirname, `../../storage/archive/excel/${fileName}`),
+      path.join(__dirname, `../../storage/${type}/archive/excel/${fileName}`),
     )
   } catch (err) {
     logger.error(
       `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
     )
   }
+
+  pubsub.publish('onConvertedToSQL', {
+    filePath: filePathSQL,
+    type, // pcr or antigen
+    correlationID,
+  })
 })
 
-// csv to sql worker
-pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
-  const { csvFileName, type, kind, correlationID } = message
-  const filePath = path.join(
-    __dirname,
-    `../../storage/json/${kind}/${csvFileName}.json`,
-  )
+// execute statement worker
+pubsub.subscribe('onConvertedToSQL', async ({ message, _ }: any) => {
+  const { filePath, type, correlationID } = message
+  const fileName = removeExtension(getFileName(filePath))
 
   try {
-    // read json file
-    const data = await fsReadFile(filePath)
-    const dataJSON = JSON.parse(String(data))
-    const sqlFilePath = path.join(
-      __dirname,
-      `../../storage/sql/${kind}/${csvFileName}.sql`,
-    )
-    const getTableName = (
-      pcrOrAntigen: string,
-      patientOrSpecimen: string,
-    ): string => {
-      if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'patient')
-        return 'dt_litbang_new'
-      else if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'specimen')
-        return 'dt_litbang_sampel'
-      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'patient')
-        return 'dt_antigen_pasien'
-      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'specimen')
-        return 'dt_antigen_sampel'
-      else return ''
-    }
+    // TODO: Execute SQL statement
 
-    // write convert json to sql
-    const writeStream = fs.createWriteStream(sqlFilePath)
-    dataJSON.forEach((data: any) => {
-      const tableName = getTableName(type, kind)
-      const tableColumns = Object.keys(data).join(', ')
-      const tableValues = Object.values(data)
-        .map(value => `'${value}'`)
-        .join(', ')
-      const sqlStatement = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})\n`
-
-      writeStream.write(sqlStatement)
-    })
-    writeStream.end()
-
-    // move csv file to archive directory
-    const filePathCSV = path.join(
-      __dirname,
-      `../../storage/csv/${kind}/${csvFileName}.csv`,
-    )
-    await rename(
-      filePathCSV,
-      path.join(
-        __dirname,
-        `../../storage/archive/csv/${kind}/${csvFileName}.csv`,
-      ),
-    )
-
-    // move json file to archive directory
+    // move sql statement file to archive directory
     await rename(
       filePath,
       path.join(
         __dirname,
-        `../../storage/archive/json/${kind}/${csvFileName}.json`,
+        `../../storage/${type}/archive/sql/${fileName}.json`,
       ),
     )
   } catch (err) {
@@ -192,3 +135,37 @@ pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
 
   logger.info(`correlation ID: ${correlationID} is done`)
 })
+
+function getFileName(filePath: string): string {
+  const splitFileName = filePath.split('/')
+  const fileName = splitFileName[splitFileName.length - 1]
+
+  return fileName
+}
+
+function removeExtension(fileName: string): string[] {
+  const splitFileName = fileName.split('.')
+  const fileNameWithoutExtension = splitFileName.filter(
+    (_, index) => index !== splitFileName.length - 1,
+  )
+
+  return fileNameWithoutExtension
+}
+
+function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
+  const isAntigen = pcrOrAntigen === 'antigen'
+  const isPCR = pcrOrAntigen === 'pcr'
+  const isPatient = patientOrSpecimen === 'patient'
+  const isSpecimen = patientOrSpecimen === 'specimen'
+  const isAntigenPatient = isAntigen && isPatient
+  const isAntigenSpecimen = isAntigen && isSpecimen
+  const isPCRPatient = isPCR && isPatient
+  const isPCRSpesimen = isPCR && isSpecimen
+
+  if (isPCRPatient) return 'dt_litbang_new'
+  if (isPCRSpesimen) return 'dt_litbang_sampel'
+  if (isAntigenPatient) return 'dt_antigen_pasien'
+  if (isAntigenSpecimen) return 'dt_antigen_sampel'
+
+  return ''
+}
