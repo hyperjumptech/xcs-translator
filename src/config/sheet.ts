@@ -1,5 +1,5 @@
 interface SheetConfig {
-  [key: string]: {
+  [type: string]: {
     destinations: { kind: string; columnRange: string; columnNames: string[] }[]
   }
 }
@@ -50,7 +50,7 @@ export const sheetConfig: SheetConfig = {
       },
       {
         kind: 'specimen',
-        columnRange: 'B-AE,AG-AT',
+        columnRange: 'B-AT',
         columnNames: [
           'nama',
           'jns_identitas',
@@ -82,6 +82,7 @@ export const sheetConfig: SheetConfig = {
           'faskes_kabkd',
           'faskes_kabnm',
           'pembiayaan',
+          'no_lab',
           'no_pemeriksaan',
           'jns_spesimen',
           'tgl_pengambilan',
