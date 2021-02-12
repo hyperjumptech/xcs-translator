@@ -23,6 +23,7 @@
     "@types/express": "^4.17.11",
     "@types/multer": "^1.4.5",
     "@types/node": "^14.14.25",
+    "@types/parse-numeric-range": "0.0.1",
     "@types/uuid": "^8.3.0",
     "cross-env": "^7.0.3",
     "husky": "^4.3.8",
@@ -36,6 +37,7 @@
     "express-winston": "^4.0.5",
     "joi": "17.4.0",
     "multer": "1.4.2",
+    "parse-numeric-range": "^1.2.0",
     "uuid": "8.3.2",
     "winston": "^3.3.3",
     "xlsx": "0.16.9"

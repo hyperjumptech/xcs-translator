@@ -6,6 +6,7 @@ import { readFile, utils } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
+import { letterRangeToArrayOfIndex } from '../../internal/rangeConverter'
 import { sheetConfig } from '../../config'
 
 const pubsub = new PubSub()
@@ -25,15 +26,18 @@ export function upload(req: Request, res: Response, next: NextFunction) {
   }
 
   const correlationID = req.headers['x-correlation-id']
-  pubsub.publish('onFileUploaded', { filePath: req.file.path, correlationID })
+  pubsub.publish('onFileUploaded', {
+    filePath: req.file.path,
+    type: req.body['type'],
+    correlationID,
+  })
 
   res.status(202).send({ correlationID })
 }
 
 // excel to csv worker
 pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
-  const { filePath, correlationID } = message
-  const { source, destinations } = sheetConfig
+  const { filePath, type, correlationID } = message
   const getFileName = (filePath: string) => {
     const splitFileName = filePath.split('/')
     const fileName = splitFileName[splitFileName.length - 1]
@@ -57,31 +61,36 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const worksheet = workbook.Sheets[worksheetname]
   const json = utils.sheet_to_json(worksheet, {
     range: 1,
-    header: source.columns,
+    header: 1,
   })
 
+  const { destinations } = sheetConfig[type as string]
+
   // convert json to csv
-  for (let { columns, name } of destinations) {
-    const filePath = path.join(
-      __dirname,
-      `../../storage/csv/${name}/${csvFileName}.csv`,
-    )
-    const data = json.map((record: any) => {
-      let filtered: Record<string, unknown> = {}
-      for (let col of columns) {
-        filtered[col] = record[col]
-      }
-      return filtered
+  for (let { columnRange, columnNames, kind } of destinations) {
+    const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
+
+    const data = json.map(record => {
+      const values = dataColumnIndices.map(
+        index => (record as any[])[index] || null,
+      )
+      let object: Record<string, unknown> = {}
+      columnNames.forEach((col, index) => {
+        object[col] = values[index]
+      })
+      return object
     })
 
     // write json file
     await writeFile(
-      path.join(__dirname, `../../storage/json/${name}/${csvFileName}.json`),
+      path.join(__dirname, `../../storage/json/${kind}/${csvFileName}.json`),
       JSON.stringify(data, null, 2),
     )
 
     // write csv file
-    const writeStream = fs.createWriteStream(filePath)
+    const writeStream = fs.createWriteStream(
+      path.join(__dirname, `../../storage/csv/${kind}/${csvFileName}.csv`),
+    )
     data.forEach((record: any) => {
       const row = Object.values(record).join(',') + '\n'
       writeStream.write(row)
@@ -90,7 +99,8 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
 
     pubsub.publish('onConvertedToCSV', {
       csvFileName,
-      type: name,
+      type, // pcr or antigen
+      kind, // patient or specimen
       correlationID,
     })
   }
@@ -110,10 +120,10 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
 
 // csv to sql worker
 pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
-  const { csvFileName, type, correlationID } = message
+  const { csvFileName, type, kind, correlationID } = message
   const filePath = path.join(
     __dirname,
-    `../../storage/json/${type}/${csvFileName}.json`,
+    `../../storage/json/${kind}/${csvFileName}.json`,
   )
 
   try {
@@ -122,23 +132,27 @@ pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
     const dataJSON = JSON.parse(String(data))
     const sqlFilePath = path.join(
       __dirname,
-      `../../storage/sql/${type}/${csvFileName}.sql`,
+      `../../storage/sql/${kind}/${csvFileName}.sql`,
     )
-    const getTableName = (type: string): string => {
-      switch (type) {
-        case 'patient':
-          return 'dt_antigen_pasien'
-        case 'specimen':
-          return 'dt_antigen_sampel'
-        default:
-          return ''
-      }
+    const getTableName = (
+      pcrOrAntigen: string,
+      patientOrSpecimen: string,
+    ): string => {
+      if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'patient')
+        return 'dt_litbang_new'
+      else if (pcrOrAntigen === 'pcr' && patientOrSpecimen === 'specimen')
+        return 'dt_litbang_sampel'
+      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'patient')
+        return 'dt_antigen_pasien'
+      else if (pcrOrAntigen === 'antigen' && patientOrSpecimen === 'specimen')
+        return 'dt_antigen_sampel'
+      else return ''
     }
 
     // write convert json to sql
     const writeStream = fs.createWriteStream(sqlFilePath)
     dataJSON.forEach((data: any) => {
-      const tableName = getTableName(type)
+      const tableName = getTableName(type, kind)
       const tableColumns = Object.keys(data).join(', ')
       const tableValues = Object.values(data)
         .map(value => `'${value}'`)
@@ -152,13 +166,13 @@ pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
     // move csv file to archive directory
     const filePathCSV = path.join(
       __dirname,
-      `../../storage/csv/${type}/${csvFileName}.csv`,
+      `../../storage/csv/${kind}/${csvFileName}.csv`,
     )
     await rename(
       filePathCSV,
       path.join(
         __dirname,
-        `../../storage/archive/csv/${type}/${csvFileName}.csv`,
+        `../../storage/archive/csv/${kind}/${csvFileName}.csv`,
       ),
     )
 
@@ -167,7 +181,7 @@ pubsub.subscribe('onConvertedToCSV', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../storage/archive/json/${type}/${csvFileName}.json`,
+        `../../storage/archive/json/${kind}/${csvFileName}.json`,
       ),
     )
   } catch (err) {
