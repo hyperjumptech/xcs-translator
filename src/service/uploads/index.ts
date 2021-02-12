@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid'
 import validate from '../../internal/middleware/validator'
 import { upload } from './handler'
 import fs from 'fs'
+import { AppError, commonHTTPErrors } from '../../internal/app-error'
 
 const router = Router()
 const validator = object({
@@ -23,7 +24,12 @@ const storage = multer.diskStorage({
     const valid = validateHash(sha1)
 
     if (!valid) {
-      cb(new Error('Found duplicate file!'), file.originalname)
+      const err = new AppError(
+        commonHTTPErrors.badRequest,
+        'Found duplicate file!',
+        true,
+      )
+      cb(err, file.originalname)
       return
     }
 
@@ -81,7 +87,12 @@ function fileFilter(
   cb: multer.FileFilterCallback,
 ) {
   if (!file.originalname.match(/\.(xlsx)$/)) {
-    cb(new Error('Only .xlsx files are allowed!'))
+    const err = new AppError(
+      commonHTTPErrors.badRequest,
+      'Only .xlsx files are allowed!',
+      true,
+    )
+    cb(err)
     return
   }
   cb(null, true)
