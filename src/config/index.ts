@@ -3,40 +3,39 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 interface dbConfig {
-  host: string
+  host: string | undefined
   port: number
-  database: string
-  user: string
-  password: string
-  connectionLimit: number
+  database: string | undefined
+  user: string | undefined
+  password: string | undefined
+  connectionLimit: number | undefined
 }
 
 interface Config {
   env: string
   port: string
-  antigenDatabase: dbConfig
-  PCRDatabase: dbConfig
+  db1: dbConfig
+  db2: dbConfig
 }
 
-// TODO: Remove hardcode
 export const cfg: Config = {
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || '8080',
-  antigenDatabase: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(String(process.env.DB_PORT), 10) || 3306,
-    database: process.env.DBNAME || 'covid_antigen',
-    user: process.env.DB_USER || 'dt_user',
-    password: process.env.DB_PASSWORD || 'dt_password',
-    connectionLimit: 5,
+  db1: {
+    host: process.env.DB_HOST,
+    port: parseInt(String(process.env.DB_PORT), 10),
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
   },
-  PCRDatabase: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(String(process.env.DB_PORT), 10) || 3307,
-    database: process.env.DBNAME || 'covid19',
-    user: process.env.DB_USER || 'dt_user',
-    password: process.env.DB_PASSWORD || 'dt_password',
-    connectionLimit: 5,
+  db2: {
+    host: process.env.DB2_HOST,
+    port: parseInt(String(process.env.DB2_PORT), 10) || 3307,
+    database: process.env.DB2_NAME,
+    user: process.env.DB2_USER,
+    password: process.env.DB2_PASSWORD,
+    connectionLimit: parseInt(String(process.env.DB2_CONNECTION_LIMIT), 10),
   },
 }
 

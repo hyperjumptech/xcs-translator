@@ -1,20 +1,12 @@
 import mariadb from 'mariadb'
 import { cfg } from '../config'
 
-// TODO: Remove hardcode
-const { antigenDatabase, PCRDatabase } = cfg
-const {
-  host,
-  port,
-  database,
-  user,
-  password,
-  connectionLimit,
-} = antigenDatabase
+const { db1, db2 } = cfg
+const { host, port, database, user, password, connectionLimit } = db1
 
 // Connection pools reuse connections between invocations,
 // and handle dropped or expired connections automatically.
-const antigenPool = mariadb.createPool({
+const db1Pool = mariadb.createPool({
   host,
   port,
   database,
@@ -22,23 +14,23 @@ const antigenPool = mariadb.createPool({
   password,
   connectionLimit,
 })
-const PCRPool = mariadb.createPool({
-  host: PCRDatabase.host,
-  port: PCRDatabase.port,
-  database: PCRDatabase.database,
-  user: PCRDatabase.user,
-  password: PCRDatabase.password,
-  connectionLimit: PCRDatabase.connectionLimit,
+const db2Pool = mariadb.createPool({
+  host: db2.host,
+  port: db2.port,
+  database: db2.database,
+  user: db2.user,
+  password: db2.password,
+  connectionLimit: db2.connectionLimit,
 })
 
 export async function getConnection(type: string) {
-  if (type === 'antigen') {
-    return await antigenPool.getConnection()
+  if (type === 'db1') {
+    return await db1Pool.getConnection()
   }
-  return await PCRPool.getConnection()
+  return await db2Pool.getConnection()
 }
 
 export async function endPool() {
-  await antigenPool.end()
-  await PCRPool.end()
+  await db1Pool.end()
+  await db2Pool.end()
 }
