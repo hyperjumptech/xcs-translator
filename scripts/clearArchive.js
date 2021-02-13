@@ -3,6 +3,25 @@
 const fs = require('fs')
 const path = require('path')
 
+const archiveDirectories = [
+  '../src/storage/antigen/archive',
+  '../src/storage/pcr/archive',
+]
+
+removeFilesInDirectories(archiveDirectories, '.gitignore')
+
+console.info('Archive is clear')
+
+function removeFilesInDirectories(directories, excludeExt) {
+  directories.forEach(dir => {
+    const normalizeDir = path.join(__dirname, dir)
+
+    getAllFiles(normalizeDir)
+      .filter(filePath => !filePath.endsWith(excludeExt))
+      .forEach(fs.unlinkSync)
+  })
+}
+
 function getAllFiles(dirPath, arrayOfFiles = []) {
   const files = fs.readdirSync(dirPath)
 
@@ -16,15 +35,3 @@ function getAllFiles(dirPath, arrayOfFiles = []) {
 
   return arrayOfFiles
 }
-
-function isGitIgnore(filePath) {
-  return filePath.endsWith('.gitignore')
-}
-
-const archiveDir = path.join(__dirname, '../src/storage/archive')
-
-getAllFiles(archiveDir)
-  .filter(filePath => !isGitIgnore(filePath))
-  .forEach(fs.unlinkSync)
-
-console.log('Archive is clear')
