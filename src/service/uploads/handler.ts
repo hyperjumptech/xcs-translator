@@ -86,7 +86,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     JSON.stringify(
       mappedData,
       (key, value) => {
-        if (!value || typeof value === 'undefined') {
+        if (value === null || typeof value === 'undefined') {
           // TODO: Remove hardcode
           if (key === 'modified_date') {
             return new Date().toISOString().slice(0, 19).replace('T', ' ')
