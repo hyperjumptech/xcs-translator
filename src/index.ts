@@ -17,8 +17,8 @@ app.get('/health', async (_, res, next) => {
   let connDB1, connDB2
   try {
     ;[connDB1, connDB2] = await Promise.all([
-      getConnection('db1'),
-      getConnection('db2'),
+      getConnection('antigen'),
+      getConnection('pcr'),
     ])
     await Promise.all([connDB1.query('SELECT 1'), connDB2.query('SELECT 1')])
 
