@@ -6,10 +6,10 @@ interface dbConfig {
   id: string
   host: string
   port: number
-  database: string
-  user: string
-  password: string
-  connectionLimit: number
+  database: string | undefined
+  user: string | undefined
+  password: string | undefined
+  connectionLimit: number | undefined
 }
 
 interface Config {
@@ -18,7 +18,6 @@ interface Config {
   db: dbConfig[]
 }
 
-// TODO: Remove hardcode
 export const cfg: Config = {
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || '8080',

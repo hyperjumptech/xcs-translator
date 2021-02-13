@@ -194,7 +194,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
     )
   } finally {
-    if (conn) return conn.release()
+    if (conn) conn.release()
   }
 
   logger.info(`correlation ID: ${correlationID} is done`)
