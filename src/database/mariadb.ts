@@ -32,7 +32,7 @@ const PCRPool = mariadb.createPool({
 })
 
 export async function getConnection(type: string) {
-  if (type === 'antigen') {
+  if (type === 'db1') {
     return await antigenPool.getConnection()
   }
   return await PCRPool.getConnection()
