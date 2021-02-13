@@ -1,29 +1,29 @@
 version: "3"
 
 services:
-  antigen_db:
+  db:
     image: mariadb:10.4
-    container_name: antigen_mariadb
+    container_name: db_mariadb
     ports:
-      - 3306:3306
+      - ${DB_PORT}:3306
     environment:
       MYSQL_ROOT_PASSWORD: toor
-      MYSQL_DATABASE: covid_antigen
-      MYSQL_USER: dt_user
-      MYSQL_PASSWORD: dt_password
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - ./mariadb/antigen_db:/var/lib/mysql
+      - ./mariadb/db:/var/lib/mysql
     restart: unless-stopped
-  pcr_db:
+  db2:
     image: mariadb:10.4
-    container_name: pcr_mariadb
+    container_name: db2_mariadb
     ports:
-      - 3307:3306
+      - ${DB2_PORT}:3306
     environment:
       MYSQL_ROOT_PASSWORD: toor
-      MYSQL_DATABASE: covid19
-      MYSQL_USER: dt_user
-      MYSQL_PASSWORD: dt_password
+      MYSQL_DATABASE: ${DB2_NAME}
+      MYSQL_USER: ${DB2_USER}
+      MYSQL_PASSWORD: ${DB2_PASSWORD}
     volumes:
-      - ./mariadb/pcr_db:/var/lib/mysql
+      - ./mariadb/db2:/var/lib/mysql
     restart: unless-stopped
