@@ -24,7 +24,7 @@ const db2Pool = mariadb.createPool({
 })
 
 export async function getConnection(type: string) {
-  if (type === 'db1') {
+  if (type === 'antigen') {
     return await db1Pool.getConnection()
   }
   return await db2Pool.getConnection()
