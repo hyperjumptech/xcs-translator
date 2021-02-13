@@ -6,7 +6,6 @@ import { readFile, utils, WorkSheet } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
-import { letterRangeToArrayOfIndex } from '../../internal/rangeConverter'
 import { sheetConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
@@ -59,9 +58,9 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     return
   }
 
-  const json = utils.sheet_to_json(worksheet, {
+  const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
     range: 1,
-    header: 1,
+    header: 'A',
     blankrows: false,
   })
 
@@ -69,20 +68,28 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const { destinations } = sheetConfig[type as string]
   const mappedData = json.map(record => {
     const data: any = {}
-    for (let { columnRange, columns, kind } of destinations) {
-      const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
-      const values = dataColumnIndices.map(
-        index => (record as any[])[index] || null,
-      )
+    for (let { columns, kind } of destinations) {
       let object: Record<string, unknown> = {}
-      columns.forEach((column, index) => {
-        const columnName = column.name
+
+      const isInteger = (column: any) => {
         const columnType = column.type
-        const isInteger = columnType === 'int'
-        const value = normalizeDataType(values[index], isInteger)
+        return columnType === 'int'
+      }
+
+      columns.inSheet.forEach((column, index) => {
+        const columnName = column.name
+        const value = normalizeDataType(record[column.col], isInteger(column))
 
         object[columnName] = value
       })
+
+      columns.outSheet.forEach((column, index) => {
+        const columnName = column.name
+        const value = normalizeDataType(null, isInteger(column))
+
+        object[columnName] = value
+      })
+
       data[kind] = object
     }
 
@@ -249,11 +256,11 @@ function normalizeSQLValue(value: any): any {
 }
 
 function validateExcelColumnInput(
-  columns: { column: string; title: string }[],
+  columns: { col: string; title: string }[],
   worksheet: WorkSheet,
 ): boolean {
-  for (let { column, title } of columns) {
-    if (worksheet[`${column}1`].v !== title) {
+  for (let { col, title } of columns) {
+    if (worksheet[`${col}1`].v !== title) {
       return false
     }
   }
