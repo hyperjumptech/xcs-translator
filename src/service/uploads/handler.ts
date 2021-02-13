@@ -2,11 +2,10 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
-import { readFile, utils } from 'xlsx'
+import { readFile, utils, WorkSheet } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
-import { letterRangeToArrayOfIndex } from '../../internal/rangeConverter'
 import { sheetConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
@@ -46,9 +45,22 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const workbook = readFile(filePath)
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
-  const json = utils.sheet_to_json(worksheet, {
+
+  const isInputValid = validateExcelColumnInput(
+    sheetConfig[type].source.columns,
+    worksheet,
+  )
+
+  if (!isInputValid) {
+    logger.info(
+      `correlation ID: ${correlationID} does not provide a valid excel file`,
+    )
+    return
+  }
+
+  const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
     range: 1,
-    header: 1,
+    header: 'A',
     blankrows: false,
   })
 
@@ -56,20 +68,28 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const { destinations } = sheetConfig[type as string]
   const mappedData = json.map(record => {
     const data: any = {}
-    for (let { columnRange, columns, kind } of destinations) {
-      const dataColumnIndices = letterRangeToArrayOfIndex(columnRange)
-      const values = dataColumnIndices.map(
-        index => (record as any[])[index] || null,
-      )
+    for (let { columns, kind } of destinations) {
       let object: Record<string, unknown> = {}
-      columns.forEach((column, index) => {
-        const columnName = column.name
+
+      const isInteger = (column: any) => {
         const columnType = column.type
-        const isInteger = columnType === 'int'
-        const value = normalizeDataType(values[index], isInteger)
+        return columnType === 'int'
+      }
+
+      columns.inSheet.forEach((column, index) => {
+        const columnName = column.name
+        const value = normalizeDataType(record[column.col], isInteger(column))
 
         object[columnName] = value
       })
+
+      columns.outSheet.forEach((column, index) => {
+        const columnName = column.name
+        const value = normalizeDataType(null, isInteger(column))
+
+        object[columnName] = value
+      })
+
       data[kind] = object
     }
 
@@ -86,7 +106,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     JSON.stringify(
       mappedData,
       (key, value) => {
-        if (!value || typeof value === 'undefined') {
+        if (value === null || typeof value === 'undefined') {
           // TODO: Remove hardcode
           if (key === 'modified_date') {
             return new Date().toISOString().slice(0, 19).replace('T', ' ')
@@ -233,4 +253,16 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
+}
+
+function validateExcelColumnInput(
+  columns: { col: string; title: string }[],
+  worksheet: WorkSheet,
+): boolean {
+  for (let { col, title } of columns) {
+    if (worksheet[`${col}1`].v !== title) {
+      return false
+    }
+  }
+  return true
 }
