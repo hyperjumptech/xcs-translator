@@ -14,17 +14,13 @@ const port = cfg.port
 app.use(express.static('public'))
 
 app.get('/health', async (_, res, next) => {
-  // TODO: Remove hardcode
-  let connAntigen, connPCR
+  let connDB1, connDB2
   try {
-    ;[connAntigen, connPCR] = await Promise.all([
-      getConnection('antigen'),
-      getConnection('pcr'),
+    ;[connDB1, connDB2] = await Promise.all([
+      getConnection('db1'),
+      getConnection('db2'),
     ])
-    await Promise.all([
-      connAntigen.query('SELECT 1'),
-      connPCR.query('SELECT 1'),
-    ])
+    await Promise.all([connDB1.query('SELECT 1'), connDB2.query('SELECT 1')])
 
     res.status(200).json({ alive: true, is_all_db_connected: true })
   } catch (error) {
@@ -35,8 +31,8 @@ app.get('/health', async (_, res, next) => {
     )
     next(err)
   } finally {
-    if (connAntigen) return connAntigen.release()
-    if (connPCR) return connPCR.release()
+    if (connDB1) connDB1.release()
+    if (connDB2) connDB2.release()
   }
 })
 app.use(uploads)
