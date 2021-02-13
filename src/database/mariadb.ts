@@ -1,44 +1,36 @@
 import mariadb from 'mariadb'
 import { cfg } from '../config'
 
-// TODO: Remove hardcode
-const { antigenDatabase, PCRDatabase } = cfg
-const {
-  host,
-  port,
-  database,
-  user,
-  password,
-  connectionLimit,
-} = antigenDatabase
+const { db } = cfg
+let pool: mariadb.Pool[]
 
 // Connection pools reuse connections between invocations,
 // and handle dropped or expired connections automatically.
-const antigenPool = mariadb.createPool({
-  host,
-  port,
-  database,
-  user,
-  password,
-  connectionLimit,
-})
-const PCRPool = mariadb.createPool({
-  host: PCRDatabase.host,
-  port: PCRDatabase.port,
-  database: PCRDatabase.database,
-  user: PCRDatabase.user,
-  password: PCRDatabase.password,
-  connectionLimit: PCRDatabase.connectionLimit,
-})
-
 export async function getConnection(type: string) {
-  if (type === 'antigen') {
-    return await antigenPool.getConnection()
+  let conn: mariadb.PoolConnection | null = null
+  for (let con of db) {
+    if (type === con.id) {
+      const pl = mariadb.createPool({
+        host: con.host,
+        port: con.port,
+        database: con.database,
+        user: con.user,
+        password: con.password,
+        connectionLimit: con.connectionLimit,
+      })
+
+      pool.push(pl)
+
+      conn = await pl.getConnection()
+      break
+    }
   }
-  return await PCRPool.getConnection()
+
+  return conn
 }
 
 export async function endPool() {
-  await antigenPool.end()
-  await PCRPool.end()
+  for (let pol of pool) {
+    await pol.end()
+  }
 }

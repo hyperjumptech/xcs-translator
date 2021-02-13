@@ -7,26 +7,24 @@ import uploads from './service/uploads'
 import { cfg } from './config'
 import { endPool, getConnection } from './database/mariadb'
 import { AppError, commonHTTPErrors } from './internal/app-error'
+import { PoolConnection } from 'mariadb'
 
 const app = express()
 const port = cfg.port
 
 app.use(express.static('public'))
 
-app.get('/health', async (_, res, next) => {
-  // TODO: Remove hardcode
-  let connAntigen, connPCR
-  try {
-    ;[connAntigen, connPCR] = await Promise.all([
-      getConnection('antigen'),
-      getConnection('pcr'),
-    ])
-    await Promise.all([
-      connAntigen.query('SELECT 1'),
-      connPCR.query('SELECT 1'),
-    ])
+let conns: PoolConnection[]
 
-    res.status(200).json({ alive: true, is_all_db_connected: true })
+app.get('/health', async (_, res, next) => {
+  try {
+    for (let i = 0; i < cfg.db.length; i++) {
+      const con = await getConnection(cfg.db[i].id)
+      if (con) {
+        con.query('SELECT 1')
+        conns.push(con)
+      }
+    }
   } catch (error) {
     const err = new AppError(
       commonHTTPErrors.unprocessableEntity,
@@ -35,8 +33,10 @@ app.get('/health', async (_, res, next) => {
     )
     next(err)
   } finally {
-    if (connAntigen) return connAntigen.release()
-    if (connPCR) return connPCR.release()
+    for (const con of conns) {
+      con.release()
+    }
+    return
   }
 })
 app.use(uploads)
