@@ -86,7 +86,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     JSON.stringify(
       mappedData,
       (key, value) => {
-        if (typeof value === 'undefined') {
+        if (!value || typeof value === 'undefined') {
           // TODO: Remove hardcode
           if (key === 'modified_date') {
             return new Date().toISOString().slice(0, 19).replace('T', ' ')
@@ -227,8 +227,8 @@ function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
   return ''
 }
 
-function normalizeSQLValue(value: any): string {
-  if (typeof value === 'number' || value === 'boolean') {
+function normalizeSQLValue(value: any): any {
+  if (typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
 
