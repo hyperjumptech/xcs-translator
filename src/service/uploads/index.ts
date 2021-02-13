@@ -15,7 +15,7 @@ const validator = object({
 })
 const storage = multer.diskStorage({
   destination: (req, __, cb) => {
-    cb(null, path.join(__dirname, `../../storage/${req?.body?.type}/excel`))
+    cb(null, path.join(__dirname, `../../../storage/${req?.body?.type}/excel`))
   },
   filename: (req, file, cb) => {
     const sha1 = crypto
@@ -68,7 +68,7 @@ function validateHash(sha1: string, type: string): Boolean {
   let result = true
   const archiveFolder = path.join(
     __dirname,
-    `../../storage/${type}/archive/excel/`,
+    `../../../storage/${type}/archive/excel/`,
   )
   const filenames = fs.readdirSync(archiveFolder, { withFileTypes: true })
 

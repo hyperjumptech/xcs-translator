@@ -99,7 +99,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   // write json file
   const filePathJSON = path.join(
     __dirname,
-    `../../storage/${type}/json/${fileName}.json`,
+    `../../../storage/${type}/json/${fileName}.json`,
   )
   await writeFile(
     filePathJSON,
@@ -125,7 +125,10 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   try {
     await rename(
       filePath,
-      path.join(__dirname, `../../storage/${type}/archive/excel/${fileName}`),
+      path.join(
+        __dirname,
+        `../../../storage/${type}/archive/excel/${fileName}`,
+      ),
     )
   } catch (err) {
     logger.error(
@@ -186,7 +189,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../storage/${type}/archive/json/${fileName}.json`,
+        `../../../storage/${type}/archive/json/${fileName}.json`,
       ),
     )
   } catch (err) {
