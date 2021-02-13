@@ -1,5 +1,8 @@
 interface SheetConfig {
   [type: string]: {
+    source: {
+      columns: { column: string; title: string }[]
+    }
     destinations: {
       kind: string
       columnRange: string
@@ -11,6 +14,56 @@ interface SheetConfig {
 // TODO: Remove hardcode
 export const sheetConfig: SheetConfig = {
   pcr: {
+    source: {
+      columns: [
+        { column: 'A', title: 'NO' },
+        { column: 'B', title: 'NAMA' },
+        { column: 'C', title: 'JNS IDENTITAS' },
+        { column: 'D', title: 'NO IDENTITAS' },
+        { column: 'E', title: 'TGL LAHIR' },
+        { column: 'F', title: 'USIA (THN)' },
+        { column: 'G', title: 'USIA (BLN)' },
+        { column: 'H', title: 'JNS KELAMIN' },
+        { column: 'I', title: 'NO HP' },
+        { column: 'J', title: 'ALAMAT' },
+        { column: 'K', title: 'ALAMAT KODE PROPINSI' },
+        { column: 'L', title: 'ALAMAT PROPINSI' },
+        { column: 'M', title: 'ALAMAT KODE KAB/KOTA' },
+        { column: 'N', title: 'ALAMAT KAB/KOTA' },
+        { column: 'O', title: 'ALAMAT KODE KECAMATAN' },
+        { column: 'P', title: 'ALAMAT KECAMATAN' },
+        { column: 'Q', title: 'ALAMAT KODE KELURAHAN' },
+        { column: 'R', title: 'ALAMAT KELURAHAN' },
+        { column: 'S', title: 'ALAMAT RW' },
+        { column: 'T', title: 'ALAMAT RT' },
+        { column: 'U', title: 'WARGANEGARA' },
+        { column: 'V', title: 'WARGANEGARA_KET' },
+        { column: 'W', title: 'TUJUAN PEMERIKSAAN' },
+        { column: 'X', title: 'TGL GEJALA' },
+        { column: 'Y', title: 'JENIS FASKES' },
+        { column: 'Z', title: 'NAMA FASKES' },
+        { column: 'AA', title: 'KODE PROPINSI FASKES' },
+        { column: 'AB', title: 'PROPINSI FASKES' },
+        { column: 'AC', title: 'KODE KAB/KOTA FASKES' },
+        { column: 'AD', title: 'KAB/KOTA FASKES' },
+        { column: 'AE', title: 'PEMBIAYAAN' },
+        { column: 'AF', title: 'NO SPESIMEN' },
+        { column: 'AG', title: 'PENGAMBILAN SPESIMEN KE' },
+        { column: 'AH', title: 'JENIS SPESIMEN' },
+        { column: 'AI', title: 'TGL PENGAMBILAN SPESIMEN' },
+        { column: 'AJ', title: 'TGL PENGIRIMAN SPESIMEN' },
+        { column: 'AK', title: 'PELAPOR SPESIMEN' },
+        { column: 'AL', title: 'TGL ENTRY LAPOR' },
+        { column: 'AM', title: 'KODE LABORATORIUM' },
+        { column: 'AN', title: 'NAMA LABORATORIUM' },
+        { column: 'AO', title: 'TGL TERIMA SPESIMEN' },
+        { column: 'AP', title: 'TGL PERIKSA SPESIMEN' },
+        { column: 'AQ', title: 'TGL HASIL KELUAR' },
+        { column: 'AR', title: 'HASIL PEMERIKSAAN' },
+        { column: 'AS', title: 'LAB YANG MELAKUKAN VERIF' },
+        { column: 'AT', title: 'TGL VERIF' },
+      ],
+    },
     destinations: [
       {
         kind: 'patient',
@@ -130,6 +183,48 @@ export const sheetConfig: SheetConfig = {
     ],
   },
   antigen: {
+    source: {
+      columns: [
+        { column: 'A', title: 'NO' },
+        { column: 'B', title: 'NAMA' },
+        { column: 'C', title: 'JNS IDENTITAS' },
+        { column: 'D', title: 'NO IDENTITAS' },
+        { column: 'E', title: 'TGL LAHIR' },
+        { column: 'F', title: 'USIA (THN)' },
+        { column: 'G', title: 'USIA (BLN)' },
+        { column: 'H', title: 'JNS KELAMIN' },
+        { column: 'I', title: 'NO HP' },
+        { column: 'J', title: 'ALAMAT' },
+        { column: 'K', title: 'ALAMAT KODE PROPINSI' },
+        { column: 'L', title: 'ALAMAT PROPINSI' },
+        { column: 'M', title: 'ALAMAT KODE KAB/KOTA' },
+        { column: 'N', title: 'ALAMAT KAB/KOTA' },
+        { column: 'O', title: 'ALAMAT KODE KECAMATAN' },
+        { column: 'P', title: 'ALAMAT KECAMATAN' },
+        { column: 'Q', title: 'ALAMAT KODE KELURAHAN' },
+        { column: 'R', title: 'ALAMAT KELURAHAN' },
+        { column: 'S', title: 'ALAMAT RW' },
+        { column: 'T', title: 'ALAMAT RT' },
+        { column: 'U', title: 'WARGANEGARA' },
+        { column: 'V', title: 'WARGANEGARA_KET' },
+        { column: 'W', title: 'TUJUAN PEMERIKSAAN' },
+        { column: 'X', title: 'JENIS FASKES' },
+        { column: 'Y', title: 'NAMA FASKES' },
+        { column: 'Z', title: 'KODE PROPINSI FASKES' },
+        { column: 'AA', title: 'PROPINSI FASKES' },
+        { column: 'AB', title: 'KODE KAB/KOTA FASKES' },
+        { column: 'AC', title: 'KAB/KOTA FASKES' },
+        { column: 'AD', title: 'PEMBIAYAAN' },
+        { column: 'AE', title: 'TGL GEJALA' },
+        { column: 'AF', title: 'NO SPESIMEN' },
+        { column: 'AG', title: 'PENGAMBILAN SPESIMEN KE' },
+        { column: 'AH', title: 'JENIS SPESIMEN' },
+        { column: 'AI', title: 'TGL PENGAMBILAN SPESIMEN' },
+        { column: 'AJ', title: 'TGL HASIL KELUAR' },
+        { column: 'AK', title: 'HASIL PEMERIKSAAN' },
+        { column: 'AL', title: 'TGL ENTRY' },
+      ],
+    },
     destinations: [
       {
         kind: 'patient',

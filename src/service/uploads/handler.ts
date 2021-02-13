@@ -2,7 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
-import { readFile, utils } from 'xlsx'
+import { readFile, utils, WorkSheet } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
@@ -46,6 +46,19 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const workbook = readFile(filePath)
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
+
+  const isInputValid = validateExcelColumnInput(
+    sheetConfig[type].source.columns,
+    worksheet,
+  )
+
+  if (!isInputValid) {
+    logger.info(
+      `correlation ID: ${correlationID} does not provide a valid excel file`,
+    )
+    return
+  }
+
   const json = utils.sheet_to_json(worksheet, {
     range: 1,
     header: 1,
@@ -233,4 +246,16 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
+}
+
+function validateExcelColumnInput(
+  columns: { column: string; title: string }[],
+  worksheet: WorkSheet,
+): boolean {
+  for (let { column, title } of columns) {
+    if (worksheet[`${column}1`].v !== title) {
+      return false
+    }
+  }
+  return true
 }
