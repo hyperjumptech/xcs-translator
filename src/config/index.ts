@@ -43,4 +43,4 @@ export const cfg: Config = {
   ],
 }
 
-export { sheetConfig } from './sheet'
+export { sheetConfig, SheetConfig } from './sheet'

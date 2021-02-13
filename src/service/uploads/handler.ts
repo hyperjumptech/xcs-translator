@@ -6,7 +6,7 @@ import { readFile, utils, WorkSheet } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
-import { sheetConfig } from '../../config'
+import { sheetConfig, SheetConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
@@ -46,10 +46,15 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
 
-  const isInputValid = validateExcelColumnInput(
-    sheetConfig[type].source.columns,
-    worksheet,
-  )
+  let sheet = {} as SheetConfig
+  const sheetArr = sheetConfig()
+  for (const sht of sheetArr) {
+    if (sht.type === type) {
+      sheet = sht
+    }
+  }
+
+  const isInputValid = validateExcelColumnInput(sheet.source.columns, worksheet)
 
   if (!isInputValid) {
     logger.info(
@@ -65,7 +70,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   })
 
   // map json with database column
-  const { destinations } = sheetConfig[type as string]
+  const { destinations } = sheet
   const mappedData = json.map(record => {
     const data: any = {}
     for (let { columns, kind } of destinations) {
