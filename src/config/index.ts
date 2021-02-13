@@ -14,14 +14,14 @@ interface dbConfig {
 interface Config {
   env: string
   port: string
-  antigenDatabase: dbConfig
-  PCRDatabase: dbConfig
+  db1: dbConfig
+  db2: dbConfig
 }
 
 export const cfg: Config = {
   env: process.env.NODE_ENV || 'development',
   port: process.env.PORT || '8080',
-  antigenDatabase: {
+  db1: {
     host: process.env.DB_HOST,
     port: parseInt(String(process.env.DB_PORT), 10),
     database: process.env.DB_NAME,
@@ -29,7 +29,7 @@ export const cfg: Config = {
     password: process.env.DB_PASSWORD,
     connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
   },
-  PCRDatabase: {
+  db2: {
     host: process.env.DB2_HOST,
     port: parseInt(String(process.env.DB2_PORT), 10) || 3307,
     database: process.env.DB2_NAME,
