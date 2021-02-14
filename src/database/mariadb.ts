@@ -2,15 +2,19 @@ import mariadb from 'mariadb'
 import { cfg } from '../config'
 
 const { db } = cfg
-let pool: mariadb.Pool[]
+let pool: Map<String, mariadb.Pool> = new Map()
 
 // Connection pools reuse connections between invocations,
 // and handle dropped or expired connections automatically.
 export async function getConnection(type: string) {
-  let conn: mariadb.PoolConnection | null = null
+  let pol = pool.get(type)
+  if (pol) {
+    return await pol.getConnection()
+  }
+
   for (let con of db) {
     if (type === con.id) {
-      const pl = mariadb.createPool({
+      pol = mariadb.createPool({
         host: con.host,
         port: con.port,
         database: con.database,
@@ -19,18 +23,16 @@ export async function getConnection(type: string) {
         connectionLimit: con.connectionLimit,
       })
 
-      pool.push(pl)
-
-      conn = await pl.getConnection()
+      pool.set(type, pol)
       break
     }
   }
 
-  return conn
+  return await pol?.getConnection()
 }
 
 export async function endPool() {
-  for (let pol of pool) {
-    await pol.end()
-  }
+  pool.forEach(pol => {
+    pol.end()
+  })
 }
