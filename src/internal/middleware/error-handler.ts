@@ -14,6 +14,9 @@ async function crashIfUntrustedErrorOrSendResponse(
   res: Response,
 ) {
   if (!err.isOperational) {
+    res.status(500).send({
+      message: err.message,
+    })
     process.exit(1)
   }
 

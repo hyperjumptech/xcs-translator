@@ -1,42 +1,41 @@
 import express from 'express'
 import * as http from 'http'
+import { PoolConnection } from 'mariadb'
 import { logger } from './internal/logger'
 import errorHandler from './internal/middleware/error-handler'
 import uploads from './service/uploads'
-
 import { cfg } from './config'
 import { endPool, getConnection } from './database/mariadb'
 import { AppError, commonHTTPErrors } from './internal/app-error'
-import { PoolConnection } from 'mariadb'
 
 const app = express()
 const port = cfg.port
 
 app.use(express.static('public'))
 
-let conns: PoolConnection[]
-
 app.get('/health', async (_, res, next) => {
+  let conns: PoolConnection[] = []
   try {
-    for (let i = 0; i < cfg.db.length; i++) {
-      const con = await getConnection(cfg.db[i].id)
-      if (con) {
-        con.query('SELECT 1')
-        conns.push(con)
-      }
-    }
+    await Promise.all(
+      cfg.db.map(async database => {
+        const conn = await getConnection(database.id)
+        if (conn) {
+          conns.push(conn)
+          await conn.query('SELECT 1')
+        }
+      }),
+    )
+
+    res.status(200).json({ alive: true, is_all_db_connected: true })
   } catch (error) {
     const err = new AppError(
       commonHTTPErrors.unprocessableEntity,
-      'Database is not connected',
+      `Database is not connected: ${error.message}`,
       false,
     )
     next(err)
   } finally {
-    for (const con of conns) {
-      con.release()
-    }
-    return
+    conns.forEach(conn => conn.release())
   }
 })
 app.use(uploads)
@@ -53,7 +52,7 @@ let server: http.Server
 const stopServer = async () => {
   logger.info('  Shutting down the server . . .')
   if (server.listening) {
-    endPool()
+    await endPool()
     logger.close()
     server.close()
   }
