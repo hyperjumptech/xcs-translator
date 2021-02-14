@@ -189,8 +189,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         // TODO: Remove hardcode
         const res = await conn.query(query)
         const id_pasien = res.insertId
-        const foreignKeyName =
-          type === 'antigen' ? 'id_pasien' : 'id_pemeriksaan'
+        const foreignKeyName = type === 'antigen' ? 'id_pasien' : 'id'
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
         await conn.query(secondQuery)
       } catch (err) {

@@ -308,7 +308,6 @@ export const sheetConfig: SheetConfig = {
             { col: 'AT', name: 'verif_date' },
           ],
           outSheet: [
-            { name: 'id', type: 'int' },
             { name: 'alamat' },
             { name: 'faskes_kd' },
             { name: 'faskes_ket' },
