@@ -8,7 +8,7 @@ import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { validateColumns, validateValues } from '../../internal/sheetValidator'
-import { sheetConfig, SheetConfig } from '../../config'
+import { sheetConfig, SheetConfig, cfg } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
@@ -255,8 +255,10 @@ function normalizeDataType(value: any, isInteger: boolean): any {
   return value
 }
 
-function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
-  // TODO: Remove hardcode
+function getTableName(
+  pcrOrAntigen: string,
+  patientOrSpecimen: string,
+): string | undefined {
   const isAntigen = pcrOrAntigen === 'antigen'
   const isPCR = pcrOrAntigen === 'pcr'
   const isPatient = patientOrSpecimen === 'patient'
@@ -265,11 +267,13 @@ function getTableName(pcrOrAntigen: string, patientOrSpecimen: string): string {
   const isAntigenSpecimen = isAntigen && isSpecimen
   const isPCRPatient = isPCR && isPatient
   const isPCRSpesimen = isPCR && isSpecimen
+  const antigenDB = cfg.db.find(database => database.id === 'antigen')
+  const PCRDB = cfg.db.find(database => database.id === 'pcr')
 
-  if (isPCRPatient) return 'dt_litbang_new'
-  if (isPCRSpesimen) return 'dt_litbang_sampel'
-  if (isAntigenPatient) return 'dt_antigen_pasien'
-  if (isAntigenSpecimen) return 'dt_antigen_sampel'
+  if (isPCRPatient) return PCRDB?.patientTable
+  if (isPCRSpesimen) return PCRDB?.specimentTable
+  if (isAntigenPatient) return antigenDB?.patientTable
+  if (isAntigenSpecimen) return antigenDB?.specimentTable
 
   return ''
 }

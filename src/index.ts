@@ -18,6 +18,9 @@ app.get('/health', async (_, res, next) => {
   try {
     await Promise.all(
       cfg.db.map(async database => {
+        if (!database.id) {
+          throw new Error('Database id is not found')
+        }
         const conn = await getConnection(database.id)
         if (conn) {
           conns.push(conn)
