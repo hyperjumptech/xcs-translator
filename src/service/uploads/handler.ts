@@ -2,10 +2,11 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
-import { readFile, utils, WorkSheet } from 'xlsx'
+import { readFile, utils } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
+import { validateColumns, validateValues } from '../../internal/sheetValidator'
 import { sheetConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
@@ -46,14 +47,14 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
 
-  const isInputValid = validateExcelColumnInput(
+  // validate columns header
+  const isColumnsValid = validateColumns(
     sheetConfig[type].source.columns,
     worksheet,
   )
-
-  if (!isInputValid) {
+  if (!isColumnsValid) {
     logger.info(
-      `correlation ID: ${correlationID} does not provide a valid excel file`,
+      `correlation ID: ${correlationID} does not come with valid excel template`,
     )
     return
   }
@@ -63,6 +64,19 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     header: 'A',
     blankrows: false,
   })
+
+  // validate values
+  let valuesConstraints: any = {}
+  sheetConfig[type].source.columns.forEach(column => {
+    valuesConstraints[column.col] = column.constraints
+  })
+  const isValuesValid = validateValues(json, valuesConstraints)
+  if (!isValuesValid) {
+    logger.info(
+      `correlation ID: ${correlationID} contains value that does not match required constraints`,
+    )
+    return
+  }
 
   // map json with database column
   const { destinations } = sheetConfig[type as string]
@@ -256,16 +270,4 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
-}
-
-function validateExcelColumnInput(
-  columns: { col: string; title: string }[],
-  worksheet: WorkSheet,
-): boolean {
-  for (let { col, title } of columns) {
-    if (worksheet[`${col}1`].v !== title) {
-      return false
-    }
-  }
-  return true
 }
