@@ -44,7 +44,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const fileName = path.basename(filePath)
 
   const buffer = await fsReadFile(filePath)
-  const sha1 = crypto.createHash('sha1').update(String(buffer)).digest('hex')
+  const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
   const valid = validateHash(sha1, type)
 
   if (!valid) {
