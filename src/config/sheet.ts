@@ -3,7 +3,11 @@ import fs from 'fs'
 export interface SheetConfig {
   type: string
   source: {
-    columns: { col: string; title: string }[]
+    columns: {
+      col: string
+      title: string
+      constraints?: any
+    }[]
   }
   destinations: {
     kind: string

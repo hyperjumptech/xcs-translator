@@ -2,10 +2,11 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
-import { readFile, utils, WorkSheet } from 'xlsx'
+import { readFile, utils } from 'xlsx'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
+import { validateColumns, validateValues } from '../../internal/sheetValidator'
 import { sheetConfig, SheetConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
@@ -54,11 +55,14 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     }
   }
 
-  const isInputValid = validateExcelColumnInput(sheet.source.columns, worksheet)
-
-  if (!isInputValid) {
+  // validate columns header
+  const isColumnsValid = validateColumns(
+    sheet.source.columns,
+    worksheet,
+  )
+  if (!isColumnsValid) {
     logger.info(
-      `correlation ID: ${correlationID} does not provide a valid excel file`,
+      `correlation ID: ${correlationID} does not come with valid excel template`,
     )
     return
   }
@@ -68,6 +72,19 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
     header: 'A',
     blankrows: false,
   })
+
+  // validate values
+  let valuesConstraints: any = {}
+  sheet.source.columns.forEach(column => {
+    valuesConstraints[column.col] = column.constraints
+  })
+  const isValuesValid = validateValues(json, valuesConstraints)
+  if (!isValuesValid) {
+    logger.info(
+      `correlation ID: ${correlationID} contains value that does not match required constraints`,
+    )
+    return
+  }
 
   // map json with database column
   const { destinations } = sheet
@@ -104,7 +121,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   // write json file
   const filePathJSON = path.join(
     __dirname,
-    `../../storage/${type}/json/${fileName}.json`,
+    `../../../storage/${type}/json/${fileName}.json`,
   )
   await writeFile(
     filePathJSON,
@@ -130,7 +147,10 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   try {
     await rename(
       filePath,
-      path.join(__dirname, `../../storage/${type}/archive/excel/${fileName}`),
+      path.join(
+        __dirname,
+        `../../../storage/${type}/archive/excel/${fileName}`,
+      ),
     )
   } catch (err) {
     logger.error(
@@ -177,8 +197,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         // TODO: Remove hardcode
         const res = await conn.query(query)
         const id_pasien = res.insertId
-        const foreignKeyName =
-          type === 'antigen' ? 'id_pasien' : 'id_pemeriksaan'
+        const foreignKeyName = type === 'antigen' ? 'id_pasien' : 'id'
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
         await conn.query(secondQuery)
       } catch (err) {
@@ -191,7 +210,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../storage/${type}/archive/json/${fileName}.json`,
+        `../../../storage/${type}/archive/json/${fileName}.json`,
       ),
     )
   } catch (err) {
@@ -258,16 +277,4 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
-}
-
-function validateExcelColumnInput(
-  columns: { col: string; title: string }[],
-  worksheet: WorkSheet,
-): boolean {
-  for (let { col, title } of columns) {
-    if (worksheet[`${col}1`].v !== title) {
-      return false
-    }
-  }
-  return true
 }

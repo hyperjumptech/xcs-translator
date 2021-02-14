@@ -4,8 +4,8 @@ const fs = require('fs')
 const path = require('path')
 
 const archiveDirectories = [
-  '../src/storage/antigen/archive',
-  '../src/storage/pcr/archive',
+  '../storage/antigen/archive',
+  '../storage/pcr/archive',
 ]
 
 removeFilesInDirectories(archiveDirectories, '.gitignore')
