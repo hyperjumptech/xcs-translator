@@ -7,15 +7,41 @@ form.addEventListener('submit', handleFormSubmit)
 function handleFormSubmit(event) {
   event.preventDefault()
 
+  const type = getDataType()
+  const file = getFile()
+
+  if (!file) {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'error',
+      title: 'Please choose a file!',
+      showConfirmButton: false,
+      timer: 3000,
+    })
+    return
+  }
+
+  const withinAllowedFileSize = validateFileSize(file)
+  if (!withinAllowedFileSize) {
+    Swal.fire({
+      toast: true,
+      position: 'top',
+      icon: 'error',
+      title:
+        'Maximum file size allowed is 1 MB. Please split into multiple files!',
+      showConfirmButton: false,
+      timer: 3000,
+    })
+    return
+  }
+
   disableSubmitButton()
 
   const formData = new FormData()
 
-  const type = getDataType()
-  const file = getFile()
-
   formData.append('type', type)
-  if (file) formData.append('file', file)
+  formData.append('file', file)
 
   upload(UPLOAD_URL, formData, {
     onSuccess() {
@@ -74,6 +100,16 @@ function getDataType() {
 function getFile() {
   const [file] = document.getElementById('excel-file').files
   return file
+}
+
+function validateFileSize(file) {
+  // Limit size to 1 MB.
+  // Hardcoded here because this js file is served as is without bundling,
+  // so there is no way to read environment variable
+  if (file.size > 1048576) {
+    return false
+  }
+  return true
 }
 
 function upload(url, formData, { onSuccess, onError, onProgress }) {
