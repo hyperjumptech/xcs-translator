@@ -32,7 +32,7 @@ export async function getConnection(type: string) {
 }
 
 export async function endPool() {
-  pool.forEach(pol => {
-    pol.end()
+  pool.forEach(async pol => {
+    await pol.end()
   })
 }
