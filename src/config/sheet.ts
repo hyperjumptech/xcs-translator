@@ -1,4 +1,4 @@
-import fs from 'fs'
+import rawConfig from '../../sheetconfig.json'
 
 export interface SheetConfig {
   type: string
@@ -19,7 +19,5 @@ export interface SheetConfig {
 }
 
 export const sheetConfig = (): SheetConfig[] => {
-  const raw = fs.readFileSync('../../sheetconfig.json')
-  const conf: SheetConfig[] = JSON.parse(String(raw))
-  return conf
+  return rawConfig
 }
