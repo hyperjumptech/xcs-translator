@@ -17,6 +17,8 @@ export interface SheetConfig {
   }
 }
 
+const datePattern = '([12]\\d{3})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])'
+
 // TODO: Remove hardcode
 export const sheetConfig: SheetConfig = {
   pcr: {
@@ -31,7 +33,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL LAHIR',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -84,7 +86,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL GEJALA',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -119,7 +121,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL PENGAMBILAN SPESIMEN',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -128,7 +130,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL PENGIRIMAN SPESIMEN',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -142,7 +144,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL ENTRY LAPOR',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -161,7 +163,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL TERIMA SPESIMEN',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -171,7 +173,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -181,7 +183,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -197,7 +199,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -337,7 +339,7 @@ export const sheetConfig: SheetConfig = {
           title: 'TGL LAHIR',
           constraints: {
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -414,7 +416,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -427,7 +429,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -437,7 +439,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
@@ -452,7 +454,7 @@ export const sheetConfig: SheetConfig = {
           constraints: {
             presence: true,
             format: {
-              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+              pattern: datePattern,
             },
           },
         },
