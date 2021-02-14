@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
 import { readFile, utils } from 'xlsx'
@@ -37,8 +38,42 @@ export function upload(req: Request, res: Response, next: NextFunction) {
   res.status(202).send({ correlationID })
 }
 
-// excel to json worker
+// hash file and check for duplicate
 pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
+  const { filePath, type, correlationID } = message
+  const fileName = path.basename(filePath)
+
+  const buffer = await fsReadFile(filePath)
+  const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
+  const valid = validateHash(sha1, type)
+
+  if (!valid) {
+    logger.info(
+      `correlation ID: ${correlationID}, same file is already uploaded`,
+    )
+    return
+  }
+
+  // add hash to filename
+  const splitFileName = fileName.split(';')
+  const fileNameWithHash = [splitFileName[0], sha1, splitFileName[1]].join(';')
+
+  try {
+    await rename(filePath, path.join(path.dirname(filePath), fileNameWithHash))
+
+    pubsub.publish('onFileHashed', {
+      ...message,
+      filePath: `${path.dirname(filePath)}/${fileNameWithHash}`,
+    })
+  } catch (err) {
+    logger.error(
+      `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
+    )
+  }
+})
+
+// excel to json worker
+pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
 
@@ -141,7 +176,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../../storage/${type}/archive/excel/${fileName}`,
+        `../../../storage/${type}/archive/excel/${fileName}.xlsx`,
       ),
     )
   } catch (err) {
@@ -215,6 +250,27 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
 
   logger.info(`correlation ID: ${correlationID} is done`)
 })
+
+function validateHash(sha1: string, type: string): Boolean {
+  let result = true
+  const archiveFolder = path.join(
+    __dirname,
+    `../../../storage/${type}/archive/excel/`,
+  )
+  const filenames = fs.readdirSync(archiveFolder, { withFileTypes: true })
+
+  for (let file of filenames) {
+    if (file.name.match(/\.(xlsx)$/)) {
+      const nameArr = file.name.split(';')
+      if (nameArr[1] === sha1) {
+        result = false
+        break
+      }
+    }
+  }
+
+  return result
+}
 
 function getFileName(filePath: string): string {
   const splitFileName = filePath.split('/')
