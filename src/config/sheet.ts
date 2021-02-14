@@ -1,7 +1,11 @@
 export interface SheetConfig {
   [type: string]: {
     source: {
-      columns: { col: string; title: string }[]
+      columns: {
+        col: string
+        title: string
+        constraints?: any
+      }[]
     }
     destinations: {
       kind: string
@@ -19,51 +23,184 @@ export const sheetConfig: SheetConfig = {
     source: {
       columns: [
         { col: 'A', title: 'NO' },
-        { col: 'B', title: 'NAMA' },
+        { col: 'B', title: 'NAMA', constraints: { presence: true } },
         { col: 'C', title: 'JNS IDENTITAS' },
         { col: 'D', title: 'NO IDENTITAS' },
-        { col: 'E', title: 'TGL LAHIR' },
-        { col: 'F', title: 'USIA (THN)' },
+        {
+          col: 'E',
+          title: 'TGL LAHIR',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'F',
+          title: 'USIA (THN)',
+          constraints: {
+            presence: true,
+            numericality: {
+              onlyInteger: true,
+              greaterThan: 0,
+            },
+          },
+        },
         { col: 'G', title: 'USIA (BLN)' },
-        { col: 'H', title: 'JNS KELAMIN' },
+        {
+          col: 'H',
+          title: 'JNS KELAMIN',
+          constraints: { presence: true, format: { pattern: '[LP]' } },
+        },
         { col: 'I', title: 'NO HP' },
         { col: 'J', title: 'ALAMAT' },
-        { col: 'K', title: 'ALAMAT KODE PROPINSI' },
-        { col: 'L', title: 'ALAMAT PROPINSI' },
-        { col: 'M', title: 'ALAMAT KODE KAB/KOTA' },
-        { col: 'N', title: 'ALAMAT KAB/KOTA' },
+        {
+          col: 'K',
+          title: 'ALAMAT KODE PROPINSI',
+          constraints: { presence: true },
+        },
+        { col: 'L', title: 'ALAMAT PROPINSI', constraints: { presence: true } },
+        {
+          col: 'M',
+          title: 'ALAMAT KODE KAB/KOTA',
+          constraints: { presence: true },
+        },
+        { col: 'N', title: 'ALAMAT KAB/KOTA', constraints: { presence: true } },
         { col: 'O', title: 'ALAMAT KODE KECAMATAN' },
         { col: 'P', title: 'ALAMAT KECAMATAN' },
         { col: 'Q', title: 'ALAMAT KODE KELURAHAN' },
         { col: 'R', title: 'ALAMAT KELURAHAN' },
         { col: 'S', title: 'ALAMAT RW' },
         { col: 'T', title: 'ALAMAT RT' },
-        { col: 'U', title: 'WARGANEGARA' },
+        { col: 'U', title: 'WARGANEGARA', constraints: { presence: true } },
         { col: 'V', title: 'WARGANEGARA_KET' },
-        { col: 'W', title: 'TUJUAN PEMERIKSAAN' },
-        { col: 'X', title: 'TGL GEJALA' },
-        { col: 'Y', title: 'JENIS FASKES' },
-        { col: 'Z', title: 'NAMA FASKES' },
-        { col: 'AA', title: 'KODE PROPINSI FASKES' },
-        { col: 'AB', title: 'PROPINSI FASKES' },
-        { col: 'AC', title: 'KODE KAB/KOTA FASKES' },
-        { col: 'AD', title: 'KAB/KOTA FASKES' },
-        { col: 'AE', title: 'PEMBIAYAAN' },
+        {
+          col: 'W',
+          title: 'TUJUAN PEMERIKSAAN',
+          constraints: { presence: true },
+        },
+        {
+          col: 'X',
+          title: 'TGL GEJALA',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        { col: 'Y', title: 'JENIS FASKES', constraints: { presence: true } },
+        { col: 'Z', title: 'NAMA FASKES', constraints: { presence: true } },
+        {
+          col: 'AA',
+          title: 'KODE PROPINSI FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AB',
+          title: 'PROPINSI FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AC',
+          title: 'KODE KAB/KOTA FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AD',
+          title: 'KAB/KOTA FASKES',
+          constraints: { presence: true },
+        },
+        { col: 'AE', title: 'PEMBIAYAAN', constraints: { presence: true } },
         { col: 'AF', title: 'NO SPESIMEN' },
         { col: 'AG', title: 'PENGAMBILAN SPESIMEN KE' },
-        { col: 'AH', title: 'JENIS SPESIMEN' },
-        { col: 'AI', title: 'TGL PENGAMBILAN SPESIMEN' },
-        { col: 'AJ', title: 'TGL PENGIRIMAN SPESIMEN' },
-        { col: 'AK', title: 'PELAPOR SPESIMEN' },
-        { col: 'AL', title: 'TGL ENTRY LAPOR' },
-        { col: 'AM', title: 'KODE LABORATORIUM' },
-        { col: 'AN', title: 'NAMA LABORATORIUM' },
-        { col: 'AO', title: 'TGL TERIMA SPESIMEN' },
-        { col: 'AP', title: 'TGL PERIKSA SPESIMEN' },
-        { col: 'AQ', title: 'TGL HASIL KELUAR' },
-        { col: 'AR', title: 'HASIL PEMERIKSAAN' },
+        { col: 'AH', title: 'JENIS SPESIMEN', constraints: { presence: true } },
+        {
+          col: 'AI',
+          title: 'TGL PENGAMBILAN SPESIMEN',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AJ',
+          title: 'TGL PENGIRIMAN SPESIMEN',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AK',
+          title: 'PELAPOR SPESIMEN',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AL',
+          title: 'TGL ENTRY LAPOR',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AM',
+          title: 'KODE LABORATORIUM',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AN',
+          title: 'NAMA LABORATORIUM',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AO',
+          title: 'TGL TERIMA SPESIMEN',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AP',
+          title: 'TGL PERIKSA SPESIMEN',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AQ',
+          title: 'TGL HASIL KELUAR',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AR',
+          title: 'HASIL PEMERIKSAAN',
+          constraints: { presence: true },
+        },
         { col: 'AS', title: 'LAB YANG MELAKUKAN VERIF' },
-        { col: 'AT', title: 'TGL VERIF' },
+        {
+          col: 'AT',
+          title: 'TGL VERIF',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
       ],
     },
     destinations: [
@@ -192,43 +329,133 @@ export const sheetConfig: SheetConfig = {
     source: {
       columns: [
         { col: 'A', title: 'NO' },
-        { col: 'B', title: 'NAMA' },
+        { col: 'B', title: 'NAMA', constraints: { presence: true } },
         { col: 'C', title: 'JNS IDENTITAS' },
         { col: 'D', title: 'NO IDENTITAS' },
-        { col: 'E', title: 'TGL LAHIR' },
-        { col: 'F', title: 'USIA (THN)' },
+        {
+          col: 'E',
+          title: 'TGL LAHIR',
+          constraints: {
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'F',
+          title: 'USIA (THN)',
+          constraints: {
+            presence: true,
+            numericality: {
+              onlyInteger: true,
+              greaterThan: 0,
+            },
+          },
+        },
         { col: 'G', title: 'USIA (BLN)' },
-        { col: 'H', title: 'JNS KELAMIN' },
+        {
+          col: 'H',
+          title: 'JNS KELAMIN',
+          constraints: { presence: true, format: { pattern: '[LP]' } },
+        },
         { col: 'I', title: 'NO HP' },
         { col: 'J', title: 'ALAMAT' },
-        { col: 'K', title: 'ALAMAT KODE PROPINSI' },
-        { col: 'L', title: 'ALAMAT PROPINSI' },
-        { col: 'M', title: 'ALAMAT KODE KAB/KOTA' },
-        { col: 'N', title: 'ALAMAT KAB/KOTA' },
+        {
+          col: 'K',
+          title: 'ALAMAT KODE PROPINSI',
+          constraints: { presence: true },
+        },
+        { col: 'L', title: 'ALAMAT PROPINSI', constraints: { presence: true } },
+        {
+          col: 'M',
+          title: 'ALAMAT KODE KAB/KOTA',
+          constraints: { presence: true },
+        },
+        { col: 'N', title: 'ALAMAT KAB/KOTA', constraints: { presence: true } },
         { col: 'O', title: 'ALAMAT KODE KECAMATAN' },
         { col: 'P', title: 'ALAMAT KECAMATAN' },
         { col: 'Q', title: 'ALAMAT KODE KELURAHAN' },
         { col: 'R', title: 'ALAMAT KELURAHAN' },
         { col: 'S', title: 'ALAMAT RW' },
         { col: 'T', title: 'ALAMAT RT' },
-        { col: 'U', title: 'WARGANEGARA' },
+        { col: 'U', title: 'WARGANEGARA', constraints: { presence: true } },
         { col: 'V', title: 'WARGANEGARA_KET' },
-        { col: 'W', title: 'TUJUAN PEMERIKSAAN' },
-        { col: 'X', title: 'JENIS FASKES' },
-        { col: 'Y', title: 'NAMA FASKES' },
-        { col: 'Z', title: 'KODE PROPINSI FASKES' },
-        { col: 'AA', title: 'PROPINSI FASKES' },
-        { col: 'AB', title: 'KODE KAB/KOTA FASKES' },
-        { col: 'AC', title: 'KAB/KOTA FASKES' },
-        { col: 'AD', title: 'PEMBIAYAAN' },
-        { col: 'AE', title: 'TGL GEJALA' },
+        {
+          col: 'W',
+          title: 'TUJUAN PEMERIKSAAN',
+          constraints: { presence: true },
+        },
+        { col: 'X', title: 'JENIS FASKES', constraints: { presence: true } },
+        { col: 'Y', title: 'NAMA FASKES', constraints: { presence: true } },
+        {
+          col: 'Z',
+          title: 'KODE PROPINSI FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AA',
+          title: 'PROPINSI FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AB',
+          title: 'KODE KAB/KOTA FASKES',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AC',
+          title: 'KAB/KOTA FASKES',
+          constraints: { presence: true },
+        },
+        { col: 'AD', title: 'PEMBIAYAAN', constraints: { presence: true } },
+        {
+          col: 'AE',
+          title: 'TGL GEJALA',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
         { col: 'AF', title: 'NO SPESIMEN' },
         { col: 'AG', title: 'PENGAMBILAN SPESIMEN KE' },
-        { col: 'AH', title: 'JENIS SPESIMEN' },
-        { col: 'AI', title: 'TGL PENGAMBILAN SPESIMEN' },
-        { col: 'AJ', title: 'TGL HASIL KELUAR' },
-        { col: 'AK', title: 'HASIL PEMERIKSAAN' },
-        { col: 'AL', title: 'TGL ENTRY' },
+        { col: 'AH', title: 'JENIS SPESIMEN', constraints: { presence: true } },
+        {
+          col: 'AI',
+          title: 'TGL PENGAMBILAN SPESIMEN',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AJ',
+          title: 'TGL HASIL KELUAR',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
+        {
+          col: 'AK',
+          title: 'HASIL PEMERIKSAAN',
+          constraints: { presence: true },
+        },
+        {
+          col: 'AL',
+          title: 'TGL ENTRY',
+          constraints: {
+            presence: true,
+            format: {
+              pattern: '([12]d{3}-(0[1-9]|1[0-2])-(0[1-9]|[12]d|3[01]))',
+            },
+          },
+        },
       ],
     },
     destinations: [
