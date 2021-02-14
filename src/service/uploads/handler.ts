@@ -15,6 +15,7 @@ const pubsub = new PubSub()
 const rename = promisify(fs.rename)
 const writeFile = promisify(fs.writeFile)
 const fsReadFile = promisify(fs.readFile)
+const storagePath = '../../../storage'
 
 export function upload(req: Request, res: Response, next: NextFunction) {
   const correlationID = req.headers['x-correlation-id']
@@ -48,8 +49,15 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   const valid = validateHash(sha1, type)
 
   if (!valid) {
-    logger.info(
+    logger.error(
       `correlation ID: ${correlationID}, same file is already uploaded`,
+    )
+    await rename(
+      filePath,
+      path.join(
+        path.dirname(filePath),
+        `${storagePath}/${type}/failed/excel/${fileName}`,
+      ),
     )
     return
   }
@@ -88,8 +96,15 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
     worksheet,
   )
   if (!isColumnsValid) {
-    logger.info(
+    logger.error(
       `correlation ID: ${correlationID} does not come with valid excel template`,
+    )
+    await rename(
+      filePath,
+      path.join(
+        path.dirname(filePath),
+        `${storagePath}/${type}/failed/excel/${getFileName(filePath)}`,
+      ),
     )
     return
   }
@@ -107,8 +122,16 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   })
   const isValuesValid = validateValues(json, valuesConstraints)
   if (!isValuesValid) {
-    logger.info(
+    logger.error(
       `correlation ID: ${correlationID} contains value that does not match required constraints`,
+    )
+
+    await rename(
+      filePath,
+      path.join(
+        path.dirname(filePath),
+        `${storagePath}/${type}/failed/excel/${getFileName(filePath)}`,
+      ),
     )
     return
   }
@@ -125,14 +148,14 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
         return columnType === 'int'
       }
 
-      columns.inSheet.forEach((column, index) => {
+      columns.inSheet.forEach(column => {
         const columnName = column.name
         const value = normalizeDataType(record[column.col], isInteger(column))
 
         object[columnName] = value
       })
 
-      columns.outSheet.forEach((column, index) => {
+      columns.outSheet.forEach(column => {
         const columnName = column.name
         const value = normalizeDataType(null, isInteger(column))
 
@@ -148,7 +171,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   // write json file
   const filePathJSON = path.join(
     __dirname,
-    `../../../storage/${type}/json/${fileName}.json`,
+    `${storagePath}/${type}/json/${fileName}.json`,
   )
   await writeFile(
     filePathJSON,
@@ -176,7 +199,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../../storage/${type}/archive/excel/${fileName}.xlsx`,
+        `${storagePath}/${type}/archive/excel/${fileName}.xlsx`,
       ),
     )
   } catch (err) {
@@ -237,7 +260,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       filePath,
       path.join(
         __dirname,
-        `../../../storage/${type}/archive/json/${fileName}.json`,
+        `${storagePath}/${type}/archive/json/${fileName}.json`,
       ),
     )
   } catch (err) {
@@ -255,7 +278,7 @@ function validateHash(sha1: string, type: string): Boolean {
   let result = true
   const archiveFolder = path.join(
     __dirname,
-    `../../../storage/${type}/archive/excel/`,
+    `${storagePath}/${type}/archive/excel/`,
   )
   const filenames = fs.readdirSync(archiveFolder, { withFileTypes: true })
 
