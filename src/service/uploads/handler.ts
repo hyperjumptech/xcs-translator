@@ -3,6 +3,7 @@ import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
 import { readFile, utils } from 'xlsx'
+import { PoolConnection } from 'mariadb'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
@@ -56,10 +57,7 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
   }
 
   // validate columns header
-  const isColumnsValid = validateColumns(
-    sheet.source.columns,
-    worksheet,
-  )
+  const isColumnsValid = validateColumns(sheet.source.columns, worksheet)
   if (!isColumnsValid) {
     logger.info(
       `correlation ID: ${correlationID} does not come with valid excel template`,
@@ -169,10 +167,13 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
 pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
-  let conn: any
+  let conn: PoolConnection | undefined
 
   try {
     conn = await getConnection(type)
+    if (!conn) {
+      throw new Error('Database connection is failed')
+    }
     const sqlStatementsFile = await fsReadFile(filePath)
     const mappedData = JSON.parse(String(sqlStatementsFile))
 
@@ -195,13 +196,15 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
 
       try {
         // TODO: Remove hardcode
-        const res = await conn.query(query)
+        const res = await conn?.query(query)
         const id_pasien = res.insertId
         const foreignKeyName = type === 'antigen' ? 'id_pasien' : 'id'
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
-        await conn.query(secondQuery)
+        await conn?.query(secondQuery)
       } catch (err) {
-        logger.error(err.message)
+        logger.error(
+          `Process with correlation id: ${correlationID}, error: ${err.message}`,
+        )
       }
     })
 
@@ -213,6 +216,8 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         `../../../storage/${type}/archive/json/${fileName}.json`,
       ),
     )
+
+    logger.info(`correlation ID: ${correlationID} is done`)
   } catch (err) {
     logger.error(
       `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
@@ -220,8 +225,6 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
   } finally {
     if (conn) conn.release()
   }
-
-  logger.info(`correlation ID: ${correlationID} is done`)
 })
 
 function getFileName(filePath: string): string {
