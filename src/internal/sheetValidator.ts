@@ -23,8 +23,5 @@ export const validateValues = (records: any[], constraints: any): boolean => {
 }
 
 const validateValue = (record: any, constraints: any): boolean => {
-  const valid = validate(record, constraints)
-  console.log(record)
-  console.log(valid)
-  return !valid
+  return !validate(record, constraints)
 }
