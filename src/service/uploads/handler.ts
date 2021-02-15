@@ -100,7 +100,11 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   }
 
   // validate columns header
-  const isColumnsValid = validateColumns(sheet.source.columns, worksheet)
+  const isColumnsValid = validateColumns(
+    sheet.source.columns,
+    sheet.source.headerRow,
+    worksheet,
+  )
   if (!isColumnsValid) {
     logger.error(
       `correlation ID: ${correlationID} does not come with valid excel template`,
@@ -116,7 +120,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   }
 
   const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
-    range: 1,
+    range: sheet.source.startingDataRow - 1,
     header: 'A',
     blankrows: false,
   })
@@ -149,21 +153,16 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
     for (let { columns, kind } of destinations) {
       let object: Record<string, unknown> = {}
 
-      const isInteger = (column: any) => {
-        const columnType = column.type
-        return columnType === 'int'
-      }
-
       columns.inSheet.forEach(column => {
         const columnName = column.name
-        const value = normalizeDataType(record[column.col], isInteger(column))
+        const value = normalizeDataType(record[column.col], column.type)
 
         object[columnName] = value
       })
 
       columns.outSheet.forEach(column => {
         const columnName = column.name
-        const value = normalizeDataType(null, isInteger(column))
+        const value = normalizeDataType(null, column.type)
 
         object[columnName] = value
       })
@@ -322,13 +321,18 @@ function removeExtension(fileName: string): string[] {
   return fileNameWithoutExtension
 }
 
-function normalizeDataType(value: any, isInteger: boolean): any {
-  if (isInteger) {
+function normalizeDataType(value: any, type?: string): any {
+  if (type === 'int') {
     if (!value) {
       return 0
     }
-
     return parseInt(value, 10)
+  }
+
+  if (type === 'date') {
+    if (!value) {
+      return '0000-00-00'
+    }
   }
 
   return value
