@@ -26,6 +26,10 @@ import uploads from './service/uploads'
 import { cfg } from './config'
 import { endPool, getConnection } from './database/mariadb'
 import { AppError, commonHTTPErrors } from './internal/app-error'
+import { initStorage } from './internal/storageInitializer'
+
+// create and initialize storage directory if not exist
+initStorage()
 
 const app = express()
 const port = cfg.port
