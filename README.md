@@ -4,7 +4,7 @@ XCS Translator is a conversion tools to help you upload an EXCEL file, it will t
 
 First you need to define your excel template in `sheetconfig.json` file. All uploaded data will be validated against the template definition. You can also add format constraints for each column using [validate.js](https://validatejs.org/#validators) syntax.
 
-The uploaded files will be availabe in `storage` directory with following structure:
+The uploaded files will be available in `storage` directory with following structure:
 
 ```bash
 storage
@@ -28,7 +28,7 @@ storage
     └── json
 ```
 
-While it's processed, the uploaded file resides under `data1` or `data2` (depends on which data is uploaded) inside `excel` directory for raw file, and `json` directory after it's converted to json. Then it will move to `archive` directory if no error happens and data is successfully inserted into database, or to `failed` directory if there is error. The failed files should be fixed manually and uploaded again.
+While being processed, your raw excel file will be stored in data1/excel or data2/excel directory. The json conversion result will be stored in json directory. After successfully inserted into database, your raw excel file will be moved to archive directory. If some exceptions occurred due to validation failure, the excel file will be moved to failed directory. Failed files should be fixed manually and re-uploaded to pass the validation.
 
 ## Requirements
 
