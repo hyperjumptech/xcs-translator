@@ -8,6 +8,7 @@
 
 - Run `cp .env.example .env`
 - Edit .env placeholder value
+- Edit sheetconfig.json file
 - Run `npm run ci`
 - Run `npm run dev`
 - Server is running in configured port (default to 8080)
@@ -16,6 +17,7 @@
 
 - Run `cp .env.example .env`
 - Edit .env placeholder value
+- Edit sheetconfig.json file
 - Run `npm run ci`
 - Run `npm start`
 - Server is running in configured port (default to 8080)
