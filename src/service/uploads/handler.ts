@@ -28,7 +28,7 @@ import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { validateColumns, validateValues } from '../../internal/sheetValidator'
-import { sheetConfig, SheetConfig, cfg } from '../../config'
+import { sheetConfig, SheetConfig, cfg, table, dbConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
@@ -358,26 +358,17 @@ function normalizeDataType(value: any, type?: string): any {
 }
 
 function getTableName(
-  pcrOrAntigen: string,
-  patientOrSpecimen: string,
+  type: string,
+  kind: string,
 ): string | undefined {
-  const isAntigen = pcrOrAntigen === 'antigen'
-  const isPCR = pcrOrAntigen === 'pcr'
-  const isPatient = patientOrSpecimen === 'patient'
-  const isSpecimen = patientOrSpecimen === 'specimen'
-  const isAntigenPatient = isAntigen && isPatient
-  const isAntigenSpecimen = isAntigen && isSpecimen
-  const isPCRPatient = isPCR && isPatient
-  const isPCRSpesimen = isPCR && isSpecimen
-  const antigenDB = cfg.db.find(database => database.id === 'antigen')
-  const PCRDB = cfg.db.find(database => database.id === 'pcr')
+  const db: dbConfig | undefined = cfg.db.find(database => database.id === type)
+  let tbl: table | undefined = {} as table
+  if (db) {
+    tbl = db.tables.find(tabel => tabel.kind === kind)
+  }
 
-  if (isPCRPatient) return PCRDB?.patientTable
-  if (isPCRSpesimen) return PCRDB?.specimentTable
-  if (isAntigenPatient) return antigenDB?.patientTable
-  if (isAntigenSpecimen) return antigenDB?.specimentTable
-
-  return ''
+  const tablename = tbl ? tbl.name : ''
+  return tablename
 }
 
 function normalizeSQLValue(value: any): any {

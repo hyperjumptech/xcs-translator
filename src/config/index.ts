@@ -21,7 +21,12 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-interface dbConfig {
+export interface table {
+  kind: string | undefined
+  name: string | undefined
+}
+
+export interface dbConfig {
   id: string | undefined
   host: string | undefined
   port: number
@@ -29,8 +34,7 @@ interface dbConfig {
   user: string | undefined
   password: string | undefined
   connectionLimit: number | undefined
-  patientTable: string | undefined
-  specimentTable: string | undefined
+  tables: table[]
 }
 
 interface Config {
@@ -51,8 +55,16 @@ export const cfg: Config = {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
-      patientTable: process.env.DB_PATIENT_TABLE,
-      specimentTable: process.env.DB_SPECIMEN_TABLE,
+      tables: [
+        {
+          kind: process.env.DB_PATIENT,
+          name: process.env.DB_PATIENT_TABLE
+        },
+        {
+          kind: process.env.DB_SPECIMEN,
+          name: process.env.DB_SPECIMEN_TABLE
+        }
+      ]
     },
     {
       id: process.env.DB2_ID,
@@ -62,8 +74,16 @@ export const cfg: Config = {
       user: process.env.DB2_USER,
       password: process.env.DB2_PASSWORD,
       connectionLimit: parseInt(String(process.env.DB2_CONNECTION_LIMIT), 10),
-      patientTable: process.env.DB2_PATIENT_TABLE,
-      specimentTable: process.env.DB2_SPECIMEN_TABLE,
+      tables: [
+        {
+          kind: process.env.DB2_PATIENT,
+          name: process.env.DB2_PATIENT_TABLE
+        },
+        {
+          kind: process.env.DB2_SPECIMEN,
+          name: process.env.DB2_SPECIMEN_TABLE
+        }
+      ]
     },
   ],
 }
