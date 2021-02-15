@@ -3,6 +3,8 @@ import rawConfig from '../../sheetconfig.json'
 export interface SheetConfig {
   type: string
   source: {
+    headerRow: number
+    startingDataRow: number
     columns: {
       col: string
       title: string
