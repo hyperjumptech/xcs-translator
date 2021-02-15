@@ -3,10 +3,11 @@ import { WorkSheet } from 'xlsx/types'
 
 export const validateColumns = (
   columns: { col: string; title: string }[],
+  headerRow = 1,
   worksheet: WorkSheet,
 ): boolean => {
   for (let { col, title } of columns) {
-    if (worksheet[`${col}1`].v !== title) {
+    if (worksheet[`${col}${headerRow}`]?.v !== title) {
       return false
     }
   }
@@ -22,5 +23,8 @@ export const validateValues = (records: any[], constraints: any): boolean => {
 }
 
 const validateValue = (record: any, constraints: any): boolean => {
-  return !validate(record, constraints)
+  const valid = validate(record, constraints)
+  console.log(record)
+  console.log(valid)
+  return !valid
 }

@@ -2,6 +2,8 @@
   {
     "type": "pcr",
     "source": {
+      "headerRow": 3,
+      "startingDataRow": 5,
       "columns": [
         { "col": "A", "title": "NO" },
         { "col": "B", "title": "NAMA", "constraints": { "presence": true } },
@@ -336,6 +338,8 @@
   {
     "type": "antigen",
     "source": {
+      "headerRow": 3,
+      "startingDataRow": 5,
       "columns": [
         { "col": "A", "title": "NO" },
         { "col": "B", "title": "NAMA", "constraints": { "presence": true } },

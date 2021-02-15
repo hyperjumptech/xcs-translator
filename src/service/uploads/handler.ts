@@ -100,7 +100,11 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   }
 
   // validate columns header
-  const isColumnsValid = validateColumns(sheet.source.columns, worksheet)
+  const isColumnsValid = validateColumns(
+    sheet.source.columns,
+    sheet.source.headerRow,
+    worksheet,
+  )
   if (!isColumnsValid) {
     logger.error(
       `correlation ID: ${correlationID} does not come with valid excel template`,
@@ -116,7 +120,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   }
 
   const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
-    range: 1,
+    range: sheet.source.startingDataRow - 1,
     header: 'A',
     blankrows: false,
   })
