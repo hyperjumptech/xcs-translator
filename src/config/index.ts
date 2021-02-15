@@ -21,12 +21,13 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-export interface table {
+export interface Table {
   kind: string | undefined
   name: string | undefined
+  foreignkey: string | undefined
 }
 
-export interface dbConfig {
+export interface DbConfig {
   id: string | undefined
   host: string | undefined
   port: number
@@ -34,13 +35,13 @@ export interface dbConfig {
   user: string | undefined
   password: string | undefined
   connectionLimit: number | undefined
-  tables: table[]
+  tables: Table[]
 }
 
 interface Config {
   env: string
   port: string
-  db: dbConfig[]
+  db: DbConfig[]
 }
 
 export const cfg: Config = {
@@ -58,13 +59,15 @@ export const cfg: Config = {
       tables: [
         {
           kind: process.env.DB_PATIENT,
-          name: process.env.DB_PATIENT_TABLE
+          name: process.env.DB_PATIENT_TABLE,
+          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY
         },
         {
           kind: process.env.DB_SPECIMEN,
-          name: process.env.DB_SPECIMEN_TABLE
+          name: process.env.DB_SPECIMEN_TABLE,
+          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY
         }
-      ]
+      ],
     },
     {
       id: process.env.DB2_ID,
@@ -77,11 +80,13 @@ export const cfg: Config = {
       tables: [
         {
           kind: process.env.DB2_PATIENT,
-          name: process.env.DB2_PATIENT_TABLE
+          name: process.env.DB2_PATIENT_TABLE,
+          foreignkey: process.env.DB2_PATIENT_FOREIGN_KEY
         },
         {
           kind: process.env.DB2_SPECIMEN,
-          name: process.env.DB2_SPECIMEN_TABLE
+          name: process.env.DB2_SPECIMEN_TABLE,
+          foreignkey: process.env.DB2_SPECIMEN_FOREIGN_KEY
         }
       ]
     },

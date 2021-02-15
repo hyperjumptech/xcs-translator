@@ -28,7 +28,7 @@ import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { validateColumns, validateValues } from '../../internal/sheetValidator'
-import { sheetConfig, SheetConfig, cfg, table, dbConfig } from '../../config'
+import { sheetConfig, SheetConfig, cfg, Table, DbConfig } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
@@ -258,23 +258,24 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       const kinds = Object.keys(data)
       const firstKind = kinds[0]
       const value = data[firstKind]
-      const tableName = getTableName(type, firstKind)
+      const tabel = getTable(type, firstKind)
+      const tableName = tabel ? tabel.name : ''
       const tableColumns = Object.keys(value).join(', ')
       const tableValues = Object.values(value).map(normalizeSQLValue).join(', ')
       const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
       const secondKind = kinds[1]
       const secondValue = data[secondKind]
-      const secondTableName = getTableName(type, secondKind)
+      const secondTabel = getTable(type, secondKind)
+      const secondTableName = secondTabel ? secondTabel.name : ''
       const secondTableColumns = Object.keys(secondValue).join(', ')
       const secondTableValues = Object.values(secondValue)
         .map(normalizeSQLValue)
         .join(', ')
 
       try {
-        // TODO: Remove hardcode
         const res = await conn?.query(query)
         const id_pasien = res.insertId
-        const foreignKeyName = type === 'antigen' ? 'id_pasien' : 'id'
+        const foreignKeyName = secondTabel ? secondTabel.foreignkey : ''
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
         await conn?.query(secondQuery)
       } catch (err) {
@@ -357,18 +358,14 @@ function normalizeDataType(value: any, type?: string): any {
   return value
 }
 
-function getTableName(
-  type: string,
-  kind: string,
-): string | undefined {
-  const db: dbConfig | undefined = cfg.db.find(database => database.id === type)
-  let tbl: table | undefined = {} as table
+function getTable(type: string, kind: string): Table | undefined {
+  const db: DbConfig | undefined = cfg.db.find(database => database.id === type)
+  let tbl: Table | undefined = {} as Table
   if (db) {
     tbl = db.tables.find(tabel => tabel.kind === kind)
   }
 
-  const tablename = tbl ? tbl.name : ''
-  return tablename
+  return tbl
 }
 
 function normalizeSQLValue(value: any): any {
