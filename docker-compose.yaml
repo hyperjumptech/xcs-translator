@@ -1,0 +1,45 @@
+#
+#   Copyright (C) 2021  XCS TRANSLATOR Contributors
+#
+#   This program is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU Affero General Public License as published
+#   by the Free Software Foundation, either version 3 of the License, or
+#   (at your option) any later version.
+#
+#   This program is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU Affero General Public License for more details.
+#
+#   You should have received a copy of the GNU Affero General Public License
+#   along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+version: "3"
+
+services:
+  db:
+    image: mariadb:10.4
+    container_name: db_mariadb
+    ports:
+      - ${DB_PORT}:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: toor
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./mariadb/db:/var/lib/mysql
+    restart: unless-stopped
+  db2:
+    image: mariadb:10.4
+    container_name: db2_mariadb
+    ports:
+      - ${DB2_PORT}:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: toor
+      MYSQL_DATABASE: ${DB2_NAME}
+      MYSQL_USER: ${DB2_USER}
+      MYSQL_PASSWORD: ${DB2_PASSWORD}
+    volumes:
+      - ./mariadb/db2:/var/lib/mysql
+    restart: unless-stopped

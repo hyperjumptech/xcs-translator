@@ -1,0 +1,77 @@
+[
+  {
+    "type": "pcr",
+    "source": {
+      "headerRow": 3,
+      "startingDataRow": 5,
+      "columns": [
+        { "col": "A", "title": "NO" },
+        { "col": "B", "title": "NAME", "constraints": { "presence": true } },
+        { "col": "C", "title": "ID NO" },
+        {
+          "col": "D",
+          "title": "DATE OF BIRTH",
+          "constraints": {
+            "format": {
+              "pattern": "([12]\\d{3})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])"
+            }
+          }
+        },
+        {
+          "col": "E",
+          "title": "GENDER",
+          "constraints": { "presence": true, "format": { "pattern": "[MF]" } }
+        },
+        { "col": "F", "title": "PHONE" },
+        { "col": "G", "title": "ADDRESS" },
+        {
+          "col": "H",
+          "title": "RESULT",
+          "constraints": { "presence": true }
+        }
+      ]
+    },
+    "destinations": [
+      {
+        "kind": "patient",
+        "columns": {
+          "inSheet": [
+            { "col": "B", "name": "name" },
+            { "col": "C", "name": "id_no" },
+            { "col": "D", "name": "birth_date", "type": "date" },
+            { "col": "E", "name": "gender" },
+            { "col": "F", "name": "phone" },
+            { "col": "G", "name": "address" },
+            { "col": "H", "name": "result" }
+          ],
+          "outSheet": [
+            { "name": "created_id" },
+            { "name": "created_date" },
+            { "name": "modified_id" },
+            { "name": "modified_date" }
+          ]
+        }
+      },
+      {
+        "kind": "specimen",
+        "columns": {
+          "inSheet": [
+            { "col": "B", "name": "name" },
+            { "col": "C", "name": "id_no" },
+            { "col": "D", "name": "birth_date", "type": "date" },
+            { "col": "E", "name": "gender" },
+            { "col": "F", "name": "phone" },
+            { "col": "G", "name": "address" },
+            { "col": "H", "name": "result" }
+          ],
+          "outSheet": [
+            { "name": "created_id" },
+            { "name": "created_date" },
+            { "name": "modified_id" },
+            { "name": "modified_date" }
+          ]
+        }
+      }
+    ]
+  }
+]
