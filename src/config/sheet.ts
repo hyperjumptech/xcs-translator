@@ -17,7 +17,8 @@
  *                                                                                *
  **********************************************************************************/
 
-import rawConfig from '../../sheetconfig.json'
+import fs from 'fs'
+import path from 'path'
 
 export interface SheetConfig {
   type: string
@@ -38,6 +39,10 @@ export interface SheetConfig {
     }
   }[]
 }
+
+const rawConfig: SheetConfig[] = JSON.parse(
+  fs.readFileSync(path.join(__dirname, '../../sheetconfig.json'), 'utf-8'),
+)
 
 export const sheetConfig = (): SheetConfig[] => {
   return rawConfig
