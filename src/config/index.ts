@@ -21,7 +21,13 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-interface dbConfig {
+export interface Table {
+  kind: string | undefined
+  name: string | undefined
+  foreignkey: string | undefined
+}
+
+export interface DbConfig {
   id: string | undefined
   host: string | undefined
   port: number
@@ -29,14 +35,13 @@ interface dbConfig {
   user: string | undefined
   password: string | undefined
   connectionLimit: number | undefined
-  patientTable: string | undefined
-  specimentTable: string | undefined
+  tables: Table[]
 }
 
 interface Config {
   env: string
   port: string
-  db: dbConfig[]
+  db: DbConfig[]
 }
 
 export const cfg: Config = {
@@ -51,8 +56,18 @@ export const cfg: Config = {
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
       connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
-      patientTable: process.env.DB_PATIENT_TABLE,
-      specimentTable: process.env.DB_SPECIMEN_TABLE,
+      tables: [
+        {
+          kind: process.env.DB_PATIENT,
+          name: process.env.DB_PATIENT_TABLE,
+          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY
+        },
+        {
+          kind: process.env.DB_SPECIMEN,
+          name: process.env.DB_SPECIMEN_TABLE,
+          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY
+        }
+      ],
     },
     {
       id: process.env.DB2_ID,
@@ -62,8 +77,18 @@ export const cfg: Config = {
       user: process.env.DB2_USER,
       password: process.env.DB2_PASSWORD,
       connectionLimit: parseInt(String(process.env.DB2_CONNECTION_LIMIT), 10),
-      patientTable: process.env.DB2_PATIENT_TABLE,
-      specimentTable: process.env.DB2_SPECIMEN_TABLE,
+      tables: [
+        {
+          kind: process.env.DB2_PATIENT,
+          name: process.env.DB2_PATIENT_TABLE,
+          foreignkey: process.env.DB2_PATIENT_FOREIGN_KEY
+        },
+        {
+          kind: process.env.DB2_SPECIMEN,
+          name: process.env.DB2_SPECIMEN_TABLE,
+          foreignkey: process.env.DB2_SPECIMEN_FOREIGN_KEY
+        }
+      ]
     },
   ],
 }
