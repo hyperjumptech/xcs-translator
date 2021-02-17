@@ -18,6 +18,7 @@
  **********************************************************************************/
 
 import { transports, format, LoggerOptions, createLogger } from 'winston'
+import expressWinston from 'express-winston'
 import { cfg } from '../config'
 const { combine, timestamp, colorize, simple, json, printf } = format
 
@@ -62,6 +63,12 @@ const options: LoggerOptions = {
   transports:
     cfg.env === 'production' ? productionTransport : developmentTransport,
 }
+
+export const requestLogger = expressWinston.logger({
+  transports: options.transports as transports.ConsoleTransportInstance[],
+  expressFormat: true,
+  level: 'info',
+})
 
 export const logger = createLogger(options)
 logger.debug('  Logging initialized at debug level')

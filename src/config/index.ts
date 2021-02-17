@@ -60,13 +60,13 @@ export const cfg: Config = {
         {
           kind: process.env.DB_PATIENT,
           name: process.env.DB_PATIENT_TABLE,
-          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY
+          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY,
         },
         {
           kind: process.env.DB_SPECIMEN,
           name: process.env.DB_SPECIMEN_TABLE,
-          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY
-        }
+          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY,
+        },
       ],
     },
     {
@@ -81,14 +81,14 @@ export const cfg: Config = {
         {
           kind: process.env.DB2_PATIENT,
           name: process.env.DB2_PATIENT_TABLE,
-          foreignkey: process.env.DB2_PATIENT_FOREIGN_KEY
+          foreignkey: process.env.DB2_PATIENT_FOREIGN_KEY,
         },
         {
           kind: process.env.DB2_SPECIMEN,
           name: process.env.DB2_SPECIMEN_TABLE,
-          foreignkey: process.env.DB2_SPECIMEN_FOREIGN_KEY
-        }
-      ]
+          foreignkey: process.env.DB2_SPECIMEN_FOREIGN_KEY,
+        },
+      ],
     },
   ],
 }
