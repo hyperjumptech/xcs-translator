@@ -20,7 +20,7 @@
 import express from 'express'
 import * as http from 'http'
 import { PoolConnection } from 'mariadb'
-import { logger } from './internal/logger'
+import { logger, requestLogger } from './internal/logger'
 import errorHandler from './internal/middleware/error-handler'
 import uploads from './service/uploads'
 import { cfg } from './config'
@@ -34,6 +34,7 @@ initStorage()
 const app = express()
 const port = cfg.port
 
+app.use(requestLogger)
 app.use(express.static('public'))
 
 app.get('/health', async (_, res, next) => {
