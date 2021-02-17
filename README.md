@@ -148,8 +148,10 @@ Data from one excel file can be inserted to multiple tables in one database, and
   - `inSheet`: (**required**) declares fields in database table that has corresponding columns in excel template
     - `col`: (**required**) the source column in excel template (A, B, C, ...)
     - `name`: (**required**) the target field in database table
+    - `type`: (**optional**) type of the field if it is not string value (one of `int` or `date`)
   - `outSheet`: declares fields in database table that does not have corresponding columns in excel template
     - `name`: (**required**) name of field in database table
+    - `type`: (**optional**) type of field if it is not string value (one of `int` or `date`)
 
 ## Run in development mode
 
