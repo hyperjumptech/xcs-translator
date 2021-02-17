@@ -34,8 +34,8 @@ export interface SheetConfig {
   destinations: {
     kind: string
     columns: {
-      inSheet: { col: string; name: string; type?: string }[]
-      outSheet: { name: string; type?: string }[]
+      inSheet: { col: string; name: string; type?: string, default?: any }[]
+      outSheet: { name: string; type?: string, default?: any }[]
     }
   }[]
 }

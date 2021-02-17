@@ -174,14 +174,14 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
 
       columns.inSheet.forEach(column => {
         const columnName = column.name
-        const value = normalizeDataType(record[column.col], column.type)
+        const value = normalizeDataType(record[column.col], column.type, column.default)
 
         object[columnName] = value
       })
 
       columns.outSheet.forEach(column => {
         const columnName = column.name
-        const value = normalizeDataType(null, column.type)
+        const value = normalizeDataType(null, column.type, column.default)
 
         object[columnName] = value
       })
@@ -255,33 +255,34 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
 
     // generate sql statement
     mappedData.forEach(async (data: any) => {
-      const kinds = Object.keys(data)
-      const firstKind = kinds[0]
-      const value = data[firstKind]
-      const tabel = getTable(type, firstKind)
-      const tableName = tabel ? tabel.name : ''
-      const tableColumns = Object.keys(value).join(', ')
-      const tableValues = Object.values(value).map(normalizeSQLValue).join(', ')
-      const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
-      const secondKind = kinds[1]
-      const secondValue = data[secondKind]
-      const secondTabel = getTable(type, secondKind)
-      const secondTableName = secondTabel ? secondTabel.name : ''
-      const secondTableColumns = Object.keys(secondValue).join(', ')
-      const secondTableValues = Object.values(secondValue)
-        .map(normalizeSQLValue)
-        .join(', ')
+      const kinds: string[] = Object.keys(data)
+      let foreignKeyName: string | undefined = undefined
+      let foreignkeyValue: any = undefined 
+      for (const kind of kinds) {
+        const value = data[kind]
+        const tabel = getTable(type, kind)
+        const tableName = tabel ? tabel.name : ''
+        const tableColumns = Object.keys(value).join(', ')
+        const tableValues = Object.values(value).map(normalizeSQLValue).join(', ')
+        foreignKeyName = tabel ? tabel.foreignkey : undefined
+        const query = generateInsertQuery({
+          foreignKeyName,
+          foreignkeyValue,
+          tableName,
+          tableColumns,
+          tableValues,
+        })
 
-      try {
-        const res = await conn?.query(query)
-        const id_pasien = res.insertId
-        const foreignKeyName = secondTabel ? secondTabel.foreignkey : ''
-        const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
-        await conn?.query(secondQuery)
-      } catch (err) {
-        logger.error(
-          `Process with correlation id: ${correlationID}, error: ${err.message}`,
-        )
+        try {
+          const res = await conn?.query(query)
+          if (res && res.insertId) {
+            foreignkeyValue = res.insertId
+          }
+        } catch (err) {
+          logger.error(
+            `Process with correlation id: ${correlationID}, error: ${err.message}`,
+          )
+        }
       }
     })
 
@@ -303,6 +304,22 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
     if (conn) conn.release()
   }
 })
+
+interface queryParams {
+  foreignKeyName: string | undefined,  
+  foreignkeyValue: any,
+  tableName: string | undefined,
+  tableColumns: string,
+  tableValues: string,
+}
+
+function generateInsertQuery(params: queryParams): string {
+  if (params.foreignKeyName && params.foreignkeyValue) {
+    return `INSERT INTO ${params.tableName} (${params.foreignKeyName}, ${params.tableColumns}) VALUES (${params.foreignkeyValue}, ${params.tableValues})`
+  }
+
+  return `INSERT INTO ${params.tableName} (${params.tableColumns}) VALUES (${params.tableValues})`
+}
 
 function validateHash(sha1: string, type: string): Boolean {
   let result = true
@@ -341,18 +358,24 @@ function removeExtension(fileName: string): string[] {
   return fileNameWithoutExtension
 }
 
-function normalizeDataType(value: any, type?: string): any {
-  if (type === 'int') {
-    if (!value) {
+function normalizeDataType(value: any, type?: string, def?: any): any {
+  // check for unset value first
+  if (!value) {
+    if (def) {
+      return def
+    }
+
+    if (type === 'int') {
       return 0
     }
-    return parseInt(value, 10)
-  }
 
-  if (type === 'date') {
-    if (!value) {
+    if (type === 'date') { 
       return '0000-00-00'
     }
+  }
+
+  if (type === 'int') {
+    return parseInt(value, 10)
   }
 
   return value
