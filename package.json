@@ -4,11 +4,16 @@
   "description": "XCS Translator is a web app to convert EXCEL file to JSON and SQL so that you can quickly and easily import data from your sheets to your database.",
   "main": "build/index.js",
   "scripts": {
-    "start": "tsc && cross-env NODE_ENV=production node build/index.js",
+    "start": "tsc && cross-env NODE_ENV=production pm2 start build/index.js --name \"web-server\" -i max",
     "dev": "tsnd --respawn src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "format": "prettier --write \"src/**/*.{js,ts,json,css,scss}\"",
-    "clear-archive": "node scripts/clearArchive.js"
+    "clear-archive": "node scripts/clearArchive.js",
+    "monit": "pm2 monit",
+    "list": "pm2 list",
+    "stop": "pm2 stop web-server",
+    "reload": "pm2 reload web-server",
+    "delete": "pm2 delete web-server"
   },
   "repository": {
     "type": "git",
@@ -28,6 +33,7 @@
     "cross-env": "^7.0.3",
     "husky": "^5.0.9",
     "lint-staged": "^10.5.4",
+    "pm2": "4.5.4",
     "prettier": "^2.2.1",
     "ts-node-dev": "^1.1.1",
     "typescript": "^4.1.5"
