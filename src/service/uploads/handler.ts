@@ -169,13 +169,13 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       JSON.stringify(
         mappedData,
         (key, value) => {
-          if (value === null || typeof value === 'undefined') {
+          if (typeof value === 'undefined') {
             // TODO: Remove hardcode
             if (key === 'modified_date') {
               return new Date().toISOString().slice(0, 19).replace('T', ' ')
             }
 
-            return ' '
+            return null
           }
 
           return value
@@ -236,8 +236,8 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
           conn?.query(getColumnInformationQuery(tableName || '')),
           conn?.query(getColumnInformationQuery(secondTableName || '')),
         ])
-        const firstSQLData = filleUnmappedColumnToJSON(firstTableInfo, value)
-        const secondSQLData: any = filleUnmappedColumnToJSON(
+        const firstSQLData = fillUnmappedColumnToJSON(firstTableInfo, value)
+        const secondSQLData: any = fillUnmappedColumnToJSON(
           secondTableInfo,
           secondValue,
         )
@@ -386,6 +386,9 @@ function normalizeSQLValue(value: any): any {
   if (typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
+  if (value === null) {
+    return 'NULL'
+  }
 
   return `'${value}'`
 }
@@ -446,13 +449,17 @@ function generateDefaultValue(dataType: string, columnType: string) {
   return null
 }
 
-function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
+function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
   const filledData: any = {}
 
   columnInfo.forEach((column: any) => {
     const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
     const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
-    if (isColumnExist) {
+    if (
+      isColumnExist &&
+      jsonData[COLUMN_NAME] !== undefined &&
+      jsonData[COLUMN_NAME] !== null
+    ) {
       filledData[COLUMN_NAME] = jsonData[COLUMN_NAME]
       return
     }
@@ -460,6 +467,8 @@ function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
     const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
     if (IS_NULLABLE === 'NO') {
       filledData[COLUMN_NAME] = defaultValue
+    } else {
+      filledData[COLUMN_NAME] = null
     }
   })
 
