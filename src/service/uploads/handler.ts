@@ -361,7 +361,7 @@ function removeExtension(fileName: string): string[] {
 function normalizeDataType(value: any, type?: string, def?: any): any {
   // check for unset value first
   if (!value) {
-    if (def) {
+    if (def !== undefined) {
       return def
     }
 
