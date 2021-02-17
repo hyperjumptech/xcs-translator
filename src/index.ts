@@ -22,6 +22,7 @@ import * as http from 'http'
 import { PoolConnection } from 'mariadb'
 import { logger, requestLogger } from './internal/logger'
 import errorHandler from './internal/middleware/error-handler'
+import pipelines from './service/pipelines'
 import uploads from './service/uploads'
 import { cfg } from './config'
 import { endPool, getConnection } from './database/mariadb'
@@ -65,6 +66,7 @@ app.get('/health', async (_, res, next) => {
     conns.forEach(conn => conn.release())
   }
 })
+app.use(pipelines)
 app.use(uploads)
 app.use(errorHandler())
 
