@@ -17,33 +17,11 @@
  *                                                                                *
  **********************************************************************************/
 
-import fs from 'fs'
-import path from 'path'
+import { Router } from 'express'
+import { index } from './handler'
 
-export interface SheetConfig {
-  type: string
-  source: {
-    headerRow: number
-    startingDataRow: number
-    columns: {
-      col: string
-      title: string
-      constraints?: any
-    }[]
-  }
-  destinations: {
-    kind: string
-    columns: {
-      inSheet: { col: string; name: string; type?: string }[]
-      outSheet: { name: string; type?: string }[]
-    }
-  }[]
-}
+const router = Router()
 
-const rawConfig: SheetConfig[] = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../../sheetconfig.json'), 'utf-8'),
-)
+router.get('/api/v1/pipelines', index)
 
-export const sheetConfig = (): SheetConfig[] => {
-  return rawConfig
-}
+export default router

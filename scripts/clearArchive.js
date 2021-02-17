@@ -21,11 +21,11 @@
 
 const fs = require('fs')
 const path = require('path')
+const sheetConfig = require('../sheetconfig.json')
 
-const archiveDirectories = [
-  '../storage/antigen/archive',
-  '../storage/pcr/archive',
-]
+const archiveDirectories = sheetConfig.map(
+  sheet => `../storage/${sheet.type}/archive`,
+)
 
 removeFilesInDirectories(archiveDirectories, '.gitignore')
 

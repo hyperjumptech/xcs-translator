@@ -20,16 +20,22 @@
 import express from 'express'
 import * as http from 'http'
 import { PoolConnection } from 'mariadb'
-import { logger } from './internal/logger'
+import { logger, requestLogger } from './internal/logger'
 import errorHandler from './internal/middleware/error-handler'
+import pipelines from './service/pipelines'
 import uploads from './service/uploads'
 import { cfg } from './config'
 import { endPool, getConnection } from './database/mariadb'
 import { AppError, commonHTTPErrors } from './internal/app-error'
+import { initStorage } from './internal/storageInitializer'
+
+// create and initialize storage directory if not exist
+initStorage()
 
 const app = express()
 const port = cfg.port
 
+app.use(requestLogger)
 app.use(express.static('public'))
 
 app.get('/health', async (_, res, next) => {
@@ -60,6 +66,7 @@ app.get('/health', async (_, res, next) => {
     conns.forEach(conn => conn.release())
   }
 })
+app.use(pipelines)
 app.use(uploads)
 app.use(errorHandler())
 

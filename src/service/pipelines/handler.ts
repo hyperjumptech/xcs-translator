@@ -19,31 +19,57 @@
 
 import fs from 'fs'
 import path from 'path'
+import { promisify } from 'util'
+import { NextFunction, Request, Response } from 'express'
+import { sheetConfig } from '../../config'
+import { AppError, commonHTTPErrors } from '../../internal/app-error'
 
-export interface SheetConfig {
+const readDir = promisify(fs.readdir)
+
+interface pipeline {
   type: string
-  source: {
-    headerRow: number
-    startingDataRow: number
-    columns: {
-      col: string
-      title: string
-      constraints?: any
-    }[]
-  }
-  destinations: {
-    kind: string
-    columns: {
-      inSheet: { col: string; name: string; type?: string }[]
-      outSheet: { name: string; type?: string }[]
-    }
-  }[]
+  excelInProgress: string[]
+  jsonInProgress: string[]
+  excelArchived: string[]
+  jsonArchived: string[]
+  excelFailed: string[]
+  jsonFailed: string[]
 }
 
-const rawConfig: SheetConfig[] = JSON.parse(
-  fs.readFileSync(path.join(__dirname, '../../sheetconfig.json'), 'utf-8'),
-)
+export async function index(req: Request, res: Response, next: NextFunction) {
+  const storageDir = path.join(__dirname, '../../../storage')
+  const pipelines: pipeline[] = []
+  for (let sheet of sheetConfig()) {
+    const { type } = sheet
+    try {
+      const excelInProgress = await readDir(`${storageDir}/${type}/excel/`)
+      const jsonInProgress = await readDir(`${storageDir}/${type}/json/`)
+      const excelArchived = await readDir(
+        `${storageDir}/${type}/archive/excel/`,
+      )
+      const jsonArchived = await readDir(`${storageDir}/${type}/archive/json`)
+      const excelFailed = await readDir(`${storageDir}/${type}/failed/excel/`)
+      const jsonFailed = await readDir(`${storageDir}/${type}/failed/json/`)
+      const pipeline = {
+        type,
+        excelInProgress,
+        jsonInProgress,
+        excelArchived,
+        jsonArchived,
+        excelFailed,
+        jsonFailed,
+      }
 
-export const sheetConfig = (): SheetConfig[] => {
-  return rawConfig
+      pipelines.push(pipeline)
+    } catch (error) {
+      const err = new AppError(
+        commonHTTPErrors.unprocessableEntity,
+        error.message,
+        true,
+      )
+      next(err)
+    }
+  }
+
+  res.status(200).send(pipelines)
 }
