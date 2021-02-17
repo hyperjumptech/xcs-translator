@@ -1,8 +1,38 @@
-# xcs-translator
+# XCS Translator
+
+XCS Translator is a web app to convert EXCEL file to JSON and SQL so that you can quickly and easily import data from your sheets to your database.
+
+First you need to define your excel template in `sheetconfig.json` file. All uploaded data will be validated against the template definition. You can also add format constraints for each column using [validate.js](https://validatejs.org/#validators) syntax.
+
+The uploaded files will be available in `storage` directory with following structure:
+
+```bash
+storage
+├── data1
+│   ├── archive
+│   │   ├── excel
+│   │   └── json
+│   ├── excel
+│   ├── failed
+│   │   ├── excel
+│   │   └── json
+│   └── json
+└── data2
+    ├── archive
+    │   ├── excel
+    │   └── json
+    ├── excel
+    ├── failed
+    │   ├── excel
+    │   └── json
+    └── json
+```
+
+While being processed, your raw excel file will be stored in `data1/excel` or `data2/excel` directory. The json conversion result will be stored in `json` directory. After successfully inserted into database, your raw excel file will be moved to `archive` directory. If some exceptions occurred due to validation failure, the excel file will be moved to `failed` directory. Failed files should be fixed manually and re-uploaded to pass the validation.
 
 ## Requirements
 
-[Node.js](https://nodejs.org/en/) v10.22 or greater
+You need [Node.js](https://nodejs.org/en/) v10.22 or greater to be available in your system.
 
 ## Run in development mode
 
