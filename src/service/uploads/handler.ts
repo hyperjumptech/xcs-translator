@@ -146,16 +146,9 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       for (let { columns, kind } of destinations) {
         let object: Record<string, unknown> = {}
 
-        columns.inSheet.forEach(column => {
+        columns.forEach(column => {
           const columnName = column.name
           const value = normalizeDataType(record[column.col], column.type)
-
-          object[columnName] = value
-        })
-
-        columns.outSheet.forEach(column => {
-          const columnName = column.name
-          const value = normalizeDataType(null, column.type)
 
           object[columnName] = value
         })

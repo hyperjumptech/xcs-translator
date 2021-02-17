@@ -33,10 +33,7 @@ export interface SheetConfig {
   }
   destinations: {
     kind: string
-    columns: {
-      inSheet: { col: string; name: string; type?: string }[]
-      outSheet: { name: string; type?: string }[]
-    }
+    columns: { col: string; name: string; type?: string }[]
   }[]
 }
 
