@@ -17,32 +17,11 @@
  *                                                                                *
  **********************************************************************************/
 
-import mariadb from 'mariadb'
-import { cfg } from '../config'
+import { Router } from 'express'
+import { index } from './handler'
 
-const { db } = cfg
-const pools = db.map(database => {
-  const pool = mariadb.createPool({
-    host: database.host,
-    port: database.port,
-    database: database.database,
-    user: database.user,
-    password: database.password,
-    connectionLimit: database.connectionLimit,
-    charset: 'utf8',
-  })
+const router = Router()
 
-  return { databaseID: database.id, pool }
-})
+router.get('/api/v1/pipelines', index)
 
-// Connection pools reuse connections between invocations,
-// and handle dropped or expired connections automatically.
-export async function getConnection(type: string) {
-  return await pools
-    .find(pool => pool.databaseID === type)
-    ?.pool.getConnection()
-}
-
-export async function endPool() {
-  await Promise.all(pools.map(pool => pool.pool.end()))
-}
+export default router
