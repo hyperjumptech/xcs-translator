@@ -231,23 +231,38 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         const value = data[firstKind]
         const tabel = getTable(type, firstKind)
         const tableName = tabel ? tabel.name : ''
-        const tableColumns = Object.keys(value).join(', ')
-        const tableValues = Object.values(value)
-          .map(normalizeSQLValue)
-          .join(', ')
-        const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
         const secondKind = kinds[1]
         const secondValue = data[secondKind]
         const secondTabel = getTable(type, secondKind)
         const secondTableName = secondTabel ? secondTabel.name : ''
-        const secondTableColumns = Object.keys(secondValue).join(', ')
-        const secondTableValues = Object.values(secondValue)
+        const getColumnInformationQuery = (tableName: string): string =>
+          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+
+        // fill unmapped database columns
+        const [firstTableInfo, secondTableInfo] = await Promise.all([
+          conn?.query(getColumnInformationQuery(tableName || '')),
+          conn?.query(getColumnInformationQuery(secondTableName || '')),
+        ])
+        const firstSQLData = filleUnmappedColumnToJSON(firstTableInfo, value)
+        const secondSQLData: any = filleUnmappedColumnToJSON(
+          secondTableInfo,
+          secondValue,
+        )
+
+        const tableColumns = Object.keys(firstSQLData).join(', ')
+        const tableValues = Object.values(firstSQLData)
+          .map(normalizeSQLValue)
+          .join(', ')
+        const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
+        const foreignKeyName = secondTabel?.foreignkey || ''
+        delete secondSQLData[foreignKeyName]
+        const secondTableColumns = Object.keys(secondSQLData).join(', ')
+        const secondTableValues = Object.values(secondSQLData)
           .map(normalizeSQLValue)
           .join(', ')
 
         const res = await conn?.query(query)
         const id_pasien = res.insertId
-        const foreignKeyName = secondTabel ? secondTabel.foreignkey : ''
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
         await conn?.query(secondQuery)
       }),
@@ -380,4 +395,43 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
+}
+
+function generateDefaultValue(dataType: string, columnType: string) {
+  switch (dataType) {
+    case 'int':
+      return 0
+    case 'varchar' || 'text':
+      return ' '
+    case 'date':
+      return '0000-00-00'
+    case 'datetime':
+      return '0000-00-00 00:00:00'
+    case 'enum':
+      // TODO: extract value from columnType. e.g enum('0','1','2') and pick one
+      return 1
+
+    default:
+      return ''
+  }
+}
+
+function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
+  const filledData: any = {}
+
+  columnInfo.forEach((column: any) => {
+    const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
+    const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
+    if (isColumnExist) {
+      filledData[COLUMN_NAME] = jsonData[COLUMN_NAME]
+      return
+    }
+
+    const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
+    if (IS_NULLABLE === 'NO') {
+      filledData[COLUMN_NAME] = defaultValue
+    }
+  })
+
+  return filledData
 }
