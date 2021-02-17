@@ -398,22 +398,59 @@ function normalizeSQLValue(value: any): any {
 }
 
 function generateDefaultValue(dataType: string, columnType: string) {
-  switch (dataType) {
-    case 'int':
-      return 0
-    case 'varchar' || 'text':
-      return ' '
-    case 'date':
-      return '0000-00-00'
-    case 'datetime':
-      return '0000-00-00 00:00:00'
-    case 'enum':
-      // TODO: extract value from columnType. e.g enum('0','1','2') and pick one
-      return 1
+  const stringDataTypes = [
+    'char',
+    'varchar',
+    'tinytext',
+    'text',
+    'mediumtext',
+    'longtext',
+    'binary',
+    'varbinary',
+  ]
+  const numericDataTypes = [
+    'bit',
+    'tinyint',
+    'smallint',
+    'mediumint',
+    'int',
+    'integer',
+    'bigint',
+    'decimal',
+    'dec',
+    'numeric',
+    'fixed',
+    'float',
+    'double',
+    'doubleprecision',
+    'real',
+    'float',
+    'bool',
+    'boolean',
+  ]
+  const isEnum = dataType == 'enum'
+  const isDate = dataType == 'date'
+  const isDateTime = dataType == 'datetime'
 
-    default:
-      return ''
+  if (isEnum) {
+    return 1
   }
+  if (isDate) {
+    return '0000-00-00'
+  }
+  if (isDateTime) {
+    return '0000-00-00 00:00:00'
+  }
+  const isStringDataTypes = stringDataTypes.find(dt => dt === dataType)
+  if (isStringDataTypes) {
+    return ' '
+  }
+  const isNumericDataTypes = numericDataTypes.find(dt => dt === dataType)
+  if (isNumericDataTypes) {
+    return 0
+  }
+
+  return null
 }
 
 function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
