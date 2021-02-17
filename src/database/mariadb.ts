@@ -29,6 +29,7 @@ const pools = db.map(database => {
     user: database.user,
     password: database.password,
     connectionLimit: database.connectionLimit,
+    charset: 'utf8',
   })
 
   return { databaseID: database.id, pool }
