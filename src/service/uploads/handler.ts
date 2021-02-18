@@ -148,7 +148,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
 
         columns.forEach(column => {
           const columnName = column.name
-          const value = normalizeDataType(record[column.col], column.type)
+          const value = record[column.col]
 
           object[columnName] = value
         })
@@ -353,23 +353,6 @@ function removeExtension(fileName: string): string[] {
   )
 
   return fileNameWithoutExtension
-}
-
-function normalizeDataType(value: any, type?: string): any {
-  if (type === 'int') {
-    if (!value) {
-      return 0
-    }
-    return parseInt(value, 10)
-  }
-
-  if (type === 'date') {
-    if (!value) {
-      return '0000-00-00'
-    }
-  }
-
-  return value
 }
 
 function getTable(type: string, kind: string): Table | undefined {
