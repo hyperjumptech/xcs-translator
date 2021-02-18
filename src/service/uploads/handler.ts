@@ -146,16 +146,9 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       for (let { columns, kind } of destinations) {
         let object: Record<string, unknown> = {}
 
-        columns.inSheet.forEach(column => {
+        columns.forEach(column => {
           const columnName = column.name
-          const value = normalizeDataType(record[column.col], column.type)
-
-          object[columnName] = value
-        })
-
-        columns.outSheet.forEach(column => {
-          const columnName = column.name
-          const value = normalizeDataType(null, column.type)
+          const value = record[column.col]
 
           object[columnName] = value
         })
@@ -176,13 +169,13 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       JSON.stringify(
         mappedData,
         (key, value) => {
-          if (value === null || typeof value === 'undefined') {
+          if (typeof value === 'undefined') {
             // TODO: Remove hardcode
             if (key === 'modified_date') {
               return new Date().toISOString().slice(0, 19).replace('T', ' ')
             }
 
-            return ' '
+            return null
           }
 
           return value
@@ -236,15 +229,15 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         const secondTabel = getTable(type, secondKind)
         const secondTableName = secondTabel ? secondTabel.name : ''
         const getColumnInformationQuery = (tableName: string): string =>
-          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
 
         // fill unmapped database columns
         const [firstTableInfo, secondTableInfo] = await Promise.all([
           conn?.query(getColumnInformationQuery(tableName || '')),
           conn?.query(getColumnInformationQuery(secondTableName || '')),
         ])
-        const firstSQLData = filleUnmappedColumnToJSON(firstTableInfo, value)
-        const secondSQLData: any = filleUnmappedColumnToJSON(
+        const firstSQLData = fillUnmappedColumnToJSON(firstTableInfo, value)
+        const secondSQLData: any = fillUnmappedColumnToJSON(
           secondTableInfo,
           secondValue,
         )
@@ -320,7 +313,7 @@ async function moveExcelToFailedDir(filePath: string, type: string) {
     filePath,
     path.join(
       path.dirname(filePath),
-      `${storagePath}/${type}/failed/excel/${fileName}`,
+      `${storagePath}/${type}/failed/excel/${fileName}.xlsx`,
     ),
   )
 }
@@ -362,23 +355,6 @@ function removeExtension(fileName: string): string[] {
   return fileNameWithoutExtension
 }
 
-function normalizeDataType(value: any, type?: string): any {
-  if (type === 'int') {
-    if (!value) {
-      return 0
-    }
-    return parseInt(value, 10)
-  }
-
-  if (type === 'date') {
-    if (!value) {
-      return '0000-00-00'
-    }
-  }
-
-  return value
-}
-
 function getTable(type: string, kind: string): Table | undefined {
   const db: DbConfig | undefined = cfg.db.find(database => database.id === type)
   let tbl: Table | undefined = {} as Table
@@ -392,6 +368,9 @@ function getTable(type: string, kind: string): Table | undefined {
 function normalizeSQLValue(value: any): any {
   if (typeof value === 'number' || typeof value === 'boolean') {
     return value
+  }
+  if (value === null) {
+    return 'NULL'
   }
 
   return `'${value}'`
@@ -453,20 +432,26 @@ function generateDefaultValue(dataType: string, columnType: string) {
   return null
 }
 
-function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
+function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
   const filledData: any = {}
 
   columnInfo.forEach((column: any) => {
     const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
     const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
-    if (isColumnExist) {
+    if (
+      isColumnExist &&
+      jsonData[COLUMN_NAME] !== undefined &&
+      jsonData[COLUMN_NAME] !== null
+    ) {
       filledData[COLUMN_NAME] = jsonData[COLUMN_NAME]
       return
     }
 
-    const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
     if (IS_NULLABLE === 'NO') {
+      const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
       filledData[COLUMN_NAME] = defaultValue
+    } else {
+      filledData[COLUMN_NAME] = null
     }
   })
 
