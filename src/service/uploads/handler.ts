@@ -224,44 +224,37 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
     await Promise.all(
       mappedData.map(async (data: any) => {
         const kinds = Object.keys(data)
-        const firstKind = kinds[0]
-        const value = data[firstKind]
-        const tabel = getTable(type, firstKind)
-        const tableName = tabel ? tabel.name : ''
-        const secondKind = kinds[1]
-        const secondValue = data[secondKind]
-        const secondTabel = getTable(type, secondKind)
-        const secondTableName = secondTabel ? secondTabel.name : ''
-        const getColumnInformationQuery = (tableName: string): string =>
-          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+        let foreignKeyValue: string | undefined = undefined
 
-        // fill unmapped database columns
-        const [firstTableInfo, secondTableInfo] = await Promise.all([
-          conn?.query(getColumnInformationQuery(tableName || '')),
-          conn?.query(getColumnInformationQuery(secondTableName || '')),
-        ])
-        const firstSQLData = fillUnmappedColumnToJSON(firstTableInfo, value)
-        const secondSQLData: any = fillUnmappedColumnToJSON(
-          secondTableInfo,
-          secondValue,
-        )
+        for (const kind of kinds) {
+          let foreignKeyName: string | undefined = undefined
+          const value = data[kind]
+          const tabel = getTable(type, kind)
+          const tableName = tabel?.name || ''
+          const getColumnInformationQuery = (tableName: string): string =>
+            `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+          const tableInfo = await conn?.query(
+            getColumnInformationQuery(tableName || ''),
+          )
+          foreignKeyName = tabel?.foreignkey || ''
+          const sqlData = fillUnmappedColumnToJSON(tableInfo, value)
+          delete sqlData[foreignKeyName]
+          const tableColumns = Object.keys(sqlData).join(', ')
+          const tableValues = Object.values(sqlData)
+            .map(normalizeSQLValue)
+            .join(', ')
 
-        const tableColumns = Object.keys(firstSQLData).join(', ')
-        const tableValues = Object.values(firstSQLData)
-          .map(normalizeSQLValue)
-          .join(', ')
-        const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
-        const foreignKeyName = secondTabel?.foreignkey || ''
-        delete secondSQLData[foreignKeyName]
-        const secondTableColumns = Object.keys(secondSQLData).join(', ')
-        const secondTableValues = Object.values(secondSQLData)
-          .map(normalizeSQLValue)
-          .join(', ')
+          const query = generateInsertQuery({
+            tableName,
+            tableColumns,
+            tableValues,
+            foreignKeyName,
+            foreignKeyValue,
+          })
 
-        const res = await conn?.query(query)
-        const id_pasien = res.insertId
-        const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
-        await conn?.query(secondQuery)
+          const res = await conn?.query(query)
+          foreignKeyValue = res.insertId // set previous table insert id as next table foreign key
+        }
       }),
     )
     conn?.commit()
@@ -300,6 +293,22 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
     if (conn) conn.release()
   }
 })
+
+interface insertQueryParams {
+  tableName: string
+  tableColumns: string
+  tableValues: string
+  foreignKeyName: string | undefined
+  foreignKeyValue: string | undefined
+}
+
+function generateInsertQuery(params: insertQueryParams) {
+  if (params.foreignKeyName && params.foreignKeyValue) {
+    return `INSERT INTO ${params.tableName} (${params.foreignKeyName}, ${params.tableColumns}) VALUES (${params.foreignKeyValue}, ${params.tableValues})`
+  }
+
+  return `INSERT INTO ${params.tableName} (${params.tableColumns}) VALUES (${params.tableValues})`
+}
 
 function pipelineError(
   correlationID: string,
