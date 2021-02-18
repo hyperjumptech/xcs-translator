@@ -134,9 +134,13 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
     sheet.source.columns.forEach(column => {
       valuesConstraints[column.col] = column.constraints
     })
-    const isValuesValid = validateValues(json, valuesConstraints)
-    if (!isValuesValid) {
-      throw new Error('Contains value that does not match required constraints')
+    const { error, isValid } = validateValues(json, valuesConstraints)
+    if (!isValid) {
+      throw new Error(
+        `Contains value that does not match required constraints: ${JSON.stringify(
+          error,
+        )}`,
+      )
     }
 
     // map json with database column
