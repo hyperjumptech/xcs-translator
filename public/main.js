@@ -122,10 +122,11 @@ function getFile() {
 }
 
 function validateFileSize(file) {
-  // Limit size to 1 MB.
+  // Limit size to 10 MB.
   // Hardcoded here because this js file is served as is without bundling,
   // so there is no way to read environment variable
-  if (file.size > 1048576) {
+  const MB = 1048576
+  if (file.size > 10 * MB) {
     return false
   }
   return true
