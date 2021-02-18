@@ -20,6 +20,22 @@
 import validate from 'validate.js'
 import { WorkSheet } from 'xlsx/types'
 
+validate.validators.date = function (value: string | number, options: any) {
+  if (
+    !validate.isDefined(value) ||
+    validate.isNumber(value) // excel auto format date to number as number of days from 1900-01-01
+  ) {
+    return
+  }
+
+  let dateTimeOptions = validate.extend({}, options, { dateOnly: true })
+  return validate.validators.datetime.call(
+    validate.validators.datetime,
+    value,
+    dateTimeOptions,
+  )
+}
+
 export const validateColumns = (
   columns: { col: string; title: string }[],
   headerRow = 1,

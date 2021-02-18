@@ -233,7 +233,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         const secondTabel = getTable(type, secondKind)
         const secondTableName = secondTabel ? secondTabel.name : ''
         const getColumnInformationQuery = (tableName: string): string =>
-          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
 
         // fill unmapped database columns
         const [firstTableInfo, secondTableInfo] = await Promise.all([
@@ -447,7 +447,14 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
       jsonData[COLUMN_NAME] !== undefined &&
       jsonData[COLUMN_NAME] !== null
     ) {
-      filledData[COLUMN_NAME] = jsonData[COLUMN_NAME]
+      let value = jsonData[COLUMN_NAME]
+      if (
+        (DATA_TYPE == 'date' || DATA_TYPE == 'datetime') &&
+        typeof value === 'number'
+      ) {
+        value = parseNumericDate(value)
+      }
+      filledData[COLUMN_NAME] = value
       return
     }
 
@@ -460,4 +467,12 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
   })
 
   return filledData
+}
+
+function parseNumericDate(numericExcelDate: number) {
+  // excel numeric date is number of days since 1900-01-01
+  let date = new Date('1900-01-01')
+  date.setDate(numericExcelDate)
+
+  return date.toISOString().slice(0, 10)
 }
