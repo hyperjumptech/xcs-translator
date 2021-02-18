@@ -376,11 +376,7 @@ function normalizeSQLValue(value: any): any {
   return `'${value}'`
 }
 
-function generateDefaultValue(
-  dataType: string,
-  columnType: string,
-  columnDefault?: any,
-) {
+function generateDefaultValue(dataType: string, columnType: string) {
   const stringDataTypes = [
     'char',
     'varchar',
@@ -416,13 +412,7 @@ function generateDefaultValue(
   const isDateTime = dataType == 'datetime'
 
   if (isEnum) {
-    if (typeof columnDefault === 'string') {
-      // remove quote at the beginning and end of string
-      return columnDefault.replace(/^'|'$/g, '')
-    }
-    const match = columnType.match(/^enum\('(.+?)'/)
-    const firstEnumValue = match?.[1]
-    return firstEnumValue
+    return 1
   }
   if (isDate) {
     return '0000-00-00'
@@ -446,13 +436,7 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
   const filledData: any = {}
 
   columnInfo.forEach((column: any) => {
-    const {
-      COLUMN_NAME,
-      DATA_TYPE,
-      COLUMN_TYPE,
-      IS_NULLABLE,
-      COLUMN_DEFAULT,
-    } = column
+    const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
     const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
     if (
       isColumnExist &&
@@ -464,11 +448,7 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
     }
 
     if (IS_NULLABLE === 'NO') {
-      const defaultValue = generateDefaultValue(
-        DATA_TYPE,
-        COLUMN_TYPE,
-        COLUMN_DEFAULT,
-      )
+      const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
       filledData[COLUMN_NAME] = defaultValue
     } else {
       filledData[COLUMN_NAME] = null
