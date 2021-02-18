@@ -61,32 +61,22 @@ export function upload(req: Request, res: Response, next: NextFunction) {
 
 // hash file and check for duplicate
 pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
+  logger.info(
+    `Starting onFileUploaded with Correlation ID: ${message.correlationID}`,
+  )
   const { filePath, type, correlationID } = message
   const fileName = path.basename(filePath)
-
   const buffer = await fsReadFile(filePath)
   const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
   const valid = validateHash(sha1, type)
-
-  if (!valid) {
-    logger.error(
-      `correlation ID: ${correlationID}, same file is already uploaded`,
-    )
-    await rename(
-      filePath,
-      path.join(
-        path.dirname(filePath),
-        `${storagePath}/${type}/failed/excel/${fileName}`,
-      ),
-    )
-    return
-  }
-
   // add hash to filename
   const splitFileName = fileName.split(';')
   const fileNameWithHash = [splitFileName[0], sha1, splitFileName[1]].join(';')
 
   try {
+    if (!valid) {
+      throw new Error('Same file is already uploaded')
+    }
     await rename(filePath, path.join(path.dirname(filePath), fileNameWithHash))
 
     pubsub.publish('onFileHashed', {
@@ -94,14 +84,18 @@ pubsub.subscribe('onFileUploaded', async ({ message, _ }: any) => {
       filePath: `${path.dirname(filePath)}/${fileNameWithHash}`,
     })
   } catch (err) {
-    logger.error(
-      `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
+    pipelineError(correlationID, 'onFileUploaded', err.message)
+    moveExcelToFailedDir(filePath, type).catch(err =>
+      pipelineError(correlationID, 'onFileUploaded', err.message),
     )
   }
 })
 
 // excel to json worker
 pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
+  logger.info(
+    `Starting onFileHashed with Correlation ID: ${message.correlationID}`,
+  )
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
 
@@ -110,6 +104,7 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
 
+  // validate columns header
   let sheet = {} as SheetConfig
   const sheetArr = sheetConfig()
   for (const sht of sheetArr) {
@@ -117,130 +112,104 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
       sheet = sht
     }
   }
-
-  // validate columns header
   const isColumnsValid = validateColumns(
     sheet.source.columns,
     sheet.source.headerRow,
     worksheet,
   )
-  if (!isColumnsValid) {
-    logger.error(
-      `correlation ID: ${correlationID} does not come with valid excel template`,
-    )
-    await rename(
-      filePath,
-      path.join(
-        path.dirname(filePath),
-        `${storagePath}/${type}/failed/excel/${getFileName(filePath)}`,
-      ),
-    )
-    return
-  }
 
-  const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
-    range: sheet.source.startingDataRow - 1,
-    header: 'A',
-    blankrows: false,
-  })
-
-  // validate values
-  let valuesConstraints: any = {}
-  sheet.source.columns.forEach(column => {
-    valuesConstraints[column.col] = column.constraints
-  })
-  const isValuesValid = validateValues(json, valuesConstraints)
-  if (!isValuesValid) {
-    logger.error(
-      `correlation ID: ${correlationID} contains value that does not match required constraints`,
-    )
-
-    await rename(
-      filePath,
-      path.join(
-        path.dirname(filePath),
-        `${storagePath}/${type}/failed/excel/${getFileName(filePath)}`,
-      ),
-    )
-    return
-  }
-
-  // map json with database column
-  const { destinations } = sheet
-  const mappedData = json.map(record => {
-    const data: any = {}
-    for (let { columns, kind } of destinations) {
-      let object: Record<string, unknown> = {}
-
-      columns.inSheet.forEach(column => {
-        const columnName = column.name
-        const value = normalizeDataType(record[column.col], column.type)
-
-        object[columnName] = value
-      })
-
-      columns.outSheet.forEach(column => {
-        const columnName = column.name
-        const value = normalizeDataType(null, column.type)
-
-        object[columnName] = value
-      })
-
-      data[kind] = object
+  try {
+    if (!isColumnsValid) {
+      throw new Error('Does not come with valid excel template')
     }
 
-    return data
-  })
+    const json: Record<string, unknown>[] = utils.sheet_to_json(worksheet, {
+      range: sheet.source.startingDataRow - 1,
+      header: 'A',
+      blankrows: false,
+    })
 
-  // write json file
-  const filePathJSON = path.join(
-    __dirname,
-    `${storagePath}/${type}/json/${fileName}.json`,
-  )
-  await writeFile(
-    filePathJSON,
-    JSON.stringify(
-      mappedData,
-      (key, value) => {
-        if (value === null || typeof value === 'undefined') {
-          // TODO: Remove hardcode
-          if (key === 'modified_date') {
-            return new Date().toISOString().slice(0, 19).replace('T', ' ')
+    // validate values
+    let valuesConstraints: any = {}
+    sheet.source.columns.forEach(column => {
+      valuesConstraints[column.col] = column.constraints
+    })
+    const isValuesValid = validateValues(json, valuesConstraints)
+    if (!isValuesValid) {
+      throw new Error('Contains value that does not match required constraints')
+    }
+
+    // map json with database column
+    const { destinations } = sheet
+    const mappedData = json.map(record => {
+      const data: any = {}
+      for (let { columns, kind } of destinations) {
+        let object: Record<string, unknown> = {}
+
+        columns.inSheet.forEach(column => {
+          const columnName = column.name
+          const value = normalizeDataType(record[column.col], column.type)
+
+          object[columnName] = value
+        })
+
+        columns.outSheet.forEach(column => {
+          const columnName = column.name
+          const value = normalizeDataType(null, column.type)
+
+          object[columnName] = value
+        })
+
+        data[kind] = object
+      }
+
+      return data
+    })
+
+    // write json file
+    const filePathJSON = path.join(
+      __dirname,
+      `${storagePath}/${type}/json/${fileName}.json`,
+    )
+    await writeFile(
+      filePathJSON,
+      JSON.stringify(
+        mappedData,
+        (key, value) => {
+          if (value === null || typeof value === 'undefined') {
+            // TODO: Remove hardcode
+            if (key === 'modified_date') {
+              return new Date().toISOString().slice(0, 19).replace('T', ' ')
+            }
+
+            return ' '
           }
 
-          return ' '
-        }
-
-        return value
-      },
-      2,
-    ),
-  )
-
-  // move excel file to archive directory
-  try {
-    await rename(
-      filePath,
-      path.join(
-        __dirname,
-        `${storagePath}/${type}/archive/excel/${fileName}.xlsx`,
+          return value
+        },
+        2,
       ),
     )
+
+    pubsub.publish('onConvertedToJSON', {
+      filePath: filePathJSON,
+      type,
+      correlationID,
+    })
   } catch (err) {
-    logger.error(
-      `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
+    pipelineError(correlationID, 'onFileHashed', err.message)
+    // move excel to failed
+    moveExcelToFailedDir(filePath, type).catch(err =>
+      pipelineError(correlationID, 'onFileHashed', err.message),
     )
   }
-
-  pubsub.publish('onConvertedToJSON', {
-    filePath: filePathJSON,
-    type, // pcr or antigen
-    correlationID,
-  })
 })
 
 // execute sql statement worker
 pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
+  logger.info(
+    `Starting onConvertedToJSON with Correlation ID: ${message.correlationID}`,
+  )
   const { filePath, type, correlationID } = message
   const fileName = removeExtension(getFileName(filePath))
   let conn: PoolConnection | undefined
@@ -254,36 +223,60 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
     const mappedData = JSON.parse(String(sqlStatementsFile))
 
     // generate sql statement
-    mappedData.forEach(async (data: any) => {
-      const kinds = Object.keys(data)
-      const firstKind = kinds[0]
-      const value = data[firstKind]
-      const tabel = getTable(type, firstKind)
-      const tableName = tabel ? tabel.name : ''
-      const tableColumns = Object.keys(value).join(', ')
-      const tableValues = Object.values(value).map(normalizeSQLValue).join(', ')
-      const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
-      const secondKind = kinds[1]
-      const secondValue = data[secondKind]
-      const secondTabel = getTable(type, secondKind)
-      const secondTableName = secondTabel ? secondTabel.name : ''
-      const secondTableColumns = Object.keys(secondValue).join(', ')
-      const secondTableValues = Object.values(secondValue)
-        .map(normalizeSQLValue)
-        .join(', ')
+    conn?.beginTransaction()
+    await Promise.all(
+      mappedData.map(async (data: any) => {
+        const kinds = Object.keys(data)
+        const firstKind = kinds[0]
+        const value = data[firstKind]
+        const tabel = getTable(type, firstKind)
+        const tableName = tabel ? tabel.name : ''
+        const secondKind = kinds[1]
+        const secondValue = data[secondKind]
+        const secondTabel = getTable(type, secondKind)
+        const secondTableName = secondTabel ? secondTabel.name : ''
+        const getColumnInformationQuery = (tableName: string): string =>
+          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
 
-      try {
+        // fill unmapped database columns
+        const [firstTableInfo, secondTableInfo] = await Promise.all([
+          conn?.query(getColumnInformationQuery(tableName || '')),
+          conn?.query(getColumnInformationQuery(secondTableName || '')),
+        ])
+        const firstSQLData = filleUnmappedColumnToJSON(firstTableInfo, value)
+        const secondSQLData: any = filleUnmappedColumnToJSON(
+          secondTableInfo,
+          secondValue,
+        )
+
+        const tableColumns = Object.keys(firstSQLData).join(', ')
+        const tableValues = Object.values(firstSQLData)
+          .map(normalizeSQLValue)
+          .join(', ')
+        const query = `INSERT INTO ${tableName} (${tableColumns}) VALUES (${tableValues})`
+        const foreignKeyName = secondTabel?.foreignkey || ''
+        delete secondSQLData[foreignKeyName]
+        const secondTableColumns = Object.keys(secondSQLData).join(', ')
+        const secondTableValues = Object.values(secondSQLData)
+          .map(normalizeSQLValue)
+          .join(', ')
+
         const res = await conn?.query(query)
         const id_pasien = res.insertId
-        const foreignKeyName = secondTabel ? secondTabel.foreignkey : ''
         const secondQuery = `INSERT INTO ${secondTableName} (${foreignKeyName}, ${secondTableColumns}) VALUES (${id_pasien}, ${secondTableValues})`
         await conn?.query(secondQuery)
-      } catch (err) {
-        logger.error(
-          `Process with correlation id: ${correlationID}, error: ${err.message}`,
-        )
-      }
-    })
+      }),
+    )
+    conn?.commit()
+
+    // move excel file to archive directory
+    await rename(
+      path.join(__dirname, `${storagePath}/${type}/excel/${fileName}.xlsx`),
+      path.join(
+        __dirname,
+        `${storagePath}/${type}/archive/excel/${fileName}.xlsx`,
+      ),
+    )
 
     // move json statement file to archive directory
     await rename(
@@ -294,15 +287,43 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
       ),
     )
 
-    logger.info(`correlation ID: ${correlationID} is done`)
+    logger.info(`Correlation ID: ${correlationID} is done`)
   } catch (err) {
-    logger.error(
-      `Process with correlation id: ${correlationID}, file: ${filePath}, error: ${err.message}`,
+    conn?.rollback()
+
+    pipelineError(correlationID, 'onConvertedToJSON', err.message)
+    // move excel to failed
+    await moveExcelToFailedDir(
+      path.join(__dirname, `${storagePath}/${type}/excel/${fileName}.xlsx`),
+      type,
+    ).catch(err =>
+      pipelineError(correlationID, 'onConvertedToJSON', err.message),
     )
   } finally {
     if (conn) conn.release()
   }
 })
+
+function pipelineError(
+  correlationID: string,
+  pipeline: string,
+  errorMessage: string,
+) {
+  logger.error(
+    `Correlation ID: ${correlationID}. Pipeline: ${pipeline}. Error: ${errorMessage}`,
+  )
+}
+
+async function moveExcelToFailedDir(filePath: string, type: string) {
+  const fileName = removeExtension(getFileName(filePath))
+  await rename(
+    filePath,
+    path.join(
+      path.dirname(filePath),
+      `${storagePath}/${type}/failed/excel/${fileName}`,
+    ),
+  )
+}
 
 function validateHash(sha1: string, type: string): Boolean {
   let result = true
@@ -374,4 +395,80 @@ function normalizeSQLValue(value: any): any {
   }
 
   return `'${value}'`
+}
+
+function generateDefaultValue(dataType: string, columnType: string) {
+  const stringDataTypes = [
+    'char',
+    'varchar',
+    'tinytext',
+    'text',
+    'mediumtext',
+    'longtext',
+    'binary',
+    'varbinary',
+  ]
+  const numericDataTypes = [
+    'bit',
+    'tinyint',
+    'smallint',
+    'mediumint',
+    'int',
+    'integer',
+    'bigint',
+    'decimal',
+    'dec',
+    'numeric',
+    'fixed',
+    'float',
+    'double',
+    'doubleprecision',
+    'real',
+    'float',
+    'bool',
+    'boolean',
+  ]
+  const isEnum = dataType == 'enum'
+  const isDate = dataType == 'date'
+  const isDateTime = dataType == 'datetime'
+
+  if (isEnum) {
+    return 1
+  }
+  if (isDate) {
+    return '0000-00-00'
+  }
+  if (isDateTime) {
+    return '0000-00-00 00:00:00'
+  }
+  const isStringDataTypes = stringDataTypes.find(dt => dt === dataType)
+  if (isStringDataTypes) {
+    return ' '
+  }
+  const isNumericDataTypes = numericDataTypes.find(dt => dt === dataType)
+  if (isNumericDataTypes) {
+    return 0
+  }
+
+  return null
+}
+
+function filleUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
+  const filledData: any = {}
+
+  columnInfo.forEach((column: any) => {
+    const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
+    const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
+    if (isColumnExist) {
+      filledData[COLUMN_NAME] = jsonData[COLUMN_NAME]
+      return
+    }
+
+    const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
+    if (IS_NULLABLE === 'NO') {
+      filledData[COLUMN_NAME] = defaultValue
+    }
+  })
+
+  return filledData
 }
