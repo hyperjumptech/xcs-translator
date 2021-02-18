@@ -162,11 +162,6 @@ Data from one excel file can be inserted to multiple tables in one database, and
 - Run `npm start`
 - Server is running in configured port (default to 8080)
 
-## Going to production practices
-
-- Set NODE_ENV=production in .env file
-- Use [PM2](https://pm2.keymetrics.io/) to manage Node.js process
-
 ## Clear archive directory
 
 - Run `npm run clear-archive`
