@@ -313,7 +313,7 @@ async function moveExcelToFailedDir(filePath: string, type: string) {
     filePath,
     path.join(
       path.dirname(filePath),
-      `${storagePath}/${type}/failed/excel/${fileName}`,
+      `${storagePath}/${type}/failed/excel/${fileName}.xlsx`,
     ),
   )
 }
