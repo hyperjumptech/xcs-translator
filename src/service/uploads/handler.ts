@@ -229,7 +229,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
         const secondTabel = getTable(type, secondKind)
         const secondTableName = secondTabel ? secondTabel.name : ''
         const getColumnInformationQuery = (tableName: string): string =>
-          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
+          `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
 
         // fill unmapped database columns
         const [firstTableInfo, secondTableInfo] = await Promise.all([
@@ -393,7 +393,11 @@ function normalizeSQLValue(value: any): any {
   return `'${value}'`
 }
 
-function generateDefaultValue(dataType: string, columnType: string) {
+function generateDefaultValue(
+  dataType: string,
+  columnType: string,
+  columnDefault?: any,
+) {
   const stringDataTypes = [
     'char',
     'varchar',
@@ -429,7 +433,13 @@ function generateDefaultValue(dataType: string, columnType: string) {
   const isDateTime = dataType == 'datetime'
 
   if (isEnum) {
-    return 1
+    if (typeof columnDefault === 'string') {
+      // remove quote at the beginning and end of string
+      return columnDefault.replace(/^'|'$/g, '')
+    }
+    const match = columnType.match(/^enum\('(.+?)'/)
+    const firstEnumValue = match?.[1]
+    return firstEnumValue
   }
   if (isDate) {
     return '0000-00-00'
@@ -453,7 +463,13 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
   const filledData: any = {}
 
   columnInfo.forEach((column: any) => {
-    const { COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE } = column
+    const {
+      COLUMN_NAME,
+      DATA_TYPE,
+      COLUMN_TYPE,
+      IS_NULLABLE,
+      COLUMN_DEFAULT,
+    } = column
     const isColumnExist = Object.keys(jsonData).find(key => key === COLUMN_NAME)
     if (
       isColumnExist &&
@@ -464,8 +480,12 @@ function fillUnmappedColumnToJSON(columnInfo: any, jsonData: any): any {
       return
     }
 
-    const defaultValue = generateDefaultValue(DATA_TYPE, COLUMN_TYPE)
     if (IS_NULLABLE === 'NO') {
+      const defaultValue = generateDefaultValue(
+        DATA_TYPE,
+        COLUMN_TYPE,
+        COLUMN_DEFAULT,
+      )
       filledData[COLUMN_NAME] = defaultValue
     } else {
       filledData[COLUMN_NAME] = null
