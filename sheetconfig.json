@@ -2,8 +2,8 @@
   {
     "type": "pcr",
     "source": {
-      "headerRow": 3,
-      "startingDataRow": 5,
+      "headerRow": 2,
+      "startingDataRow": 4,
       "columns": [
         { "col": "A", "title": "NO" },
         { "col": "B", "title": "NAME", "constraints": { "presence": true } },
@@ -34,43 +34,27 @@
     "destinations": [
       {
         "kind": "patient",
-        "columns": {
-          "inSheet": [
-            { "col": "B", "name": "name" },
-            { "col": "C", "name": "id_no" },
-            { "col": "D", "name": "birth_date", "type": "date" },
-            { "col": "E", "name": "gender" },
-            { "col": "F", "name": "phone" },
-            { "col": "G", "name": "address" },
-            { "col": "H", "name": "result" }
-          ],
-          "outSheet": [
-            { "name": "created_id" },
-            { "name": "created_date" },
-            { "name": "modified_id" },
-            { "name": "modified_date" }
-          ]
-        }
+        "columns": [
+          { "col": "B", "name": "name" },
+          { "col": "C", "name": "id_no" },
+          { "col": "D", "name": "birth_date" },
+          { "col": "E", "name": "gender" },
+          { "col": "F", "name": "phone" },
+          { "col": "G", "name": "address" },
+          { "col": "H", "name": "result" }
+        ]
       },
       {
         "kind": "specimen",
-        "columns": {
-          "inSheet": [
-            { "col": "B", "name": "name" },
-            { "col": "C", "name": "id_no" },
-            { "col": "D", "name": "birth_date", "type": "date" },
-            { "col": "E", "name": "gender" },
-            { "col": "F", "name": "phone" },
-            { "col": "G", "name": "address" },
-            { "col": "H", "name": "result" }
-          ],
-          "outSheet": [
-            { "name": "created_id" },
-            { "name": "created_date" },
-            { "name": "modified_id" },
-            { "name": "modified_date" }
-          ]
-        }
+        "columns": [
+          { "col": "B", "name": "name" },
+          { "col": "C", "name": "id_no" },
+          { "col": "D", "name": "birth_date" },
+          { "col": "E", "name": "gender" },
+          { "col": "F", "name": "phone" },
+          { "col": "G", "name": "address" },
+          { "col": "H", "name": "result" }
+        ]
       }
     ]
   }
