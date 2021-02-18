@@ -33,14 +33,18 @@ export const validateColumns = (
   return true
 }
 
-export const validateValues = (records: any[], constraints: any): boolean => {
+export const validateValues = (
+  records: any[],
+  constraints: any,
+): { error: any; isValid: boolean } => {
   for (let record of records) {
-    const valid = validateValue(record, constraints)
-    if (!valid) return false
+    const err = validate(record, constraints)
+    if (err) {
+      return {
+        error: { firstColumn: Object.values(record)[0], message: err },
+        isValid: false,
+      }
+    }
   }
-  return true
-}
-
-const validateValue = (record: any, constraints: any): boolean => {
-  return !validate(record, constraints)
+  return { error: null, isValid: true }
 }
