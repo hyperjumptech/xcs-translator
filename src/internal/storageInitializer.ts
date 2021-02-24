@@ -1,9 +1,9 @@
 import fs from 'fs'
 import path from 'path'
-import { sheetConfig } from '../config'
+import { sheetsConfig } from '../config'
 
 export function initStorage(): void {
-  for (let sheet of sheetConfig()) {
+  for (let sheet of sheetsConfig) {
     createStorageForType(sheet.type)
   }
 }

@@ -24,7 +24,7 @@ import { logger, requestLogger } from './internal/logger'
 import errorHandler from './internal/middleware/error-handler'
 import pipelines from './service/pipelines'
 import uploads from './service/uploads'
-import { cfg } from './config'
+import { cfg, sheetsConfig } from './config'
 import { endPool, getConnection } from './database/mariadb'
 import { AppError, commonHTTPErrors } from './internal/app-error'
 import { initStorage } from './internal/storageInitializer'
@@ -42,11 +42,11 @@ app.get('/health', async (_, res, next) => {
   let conns: PoolConnection[] = []
   try {
     await Promise.all(
-      cfg.db.map(async database => {
-        if (!database.id) {
-          throw new Error('Database id is not found')
+      sheetsConfig.map(async ({ type }) => {
+        if (!type) {
+          throw new Error('Database type is not found')
         }
-        const conn = await getConnection(database.id)
+        const conn = await getConnection(type)
         if (conn) {
           conns.push(conn)
           await conn.query('SELECT 1')
