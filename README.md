@@ -36,9 +36,64 @@ You need [Node.js](https://nodejs.org/en/) v10.22 or greater to be available in 
 
 ## Configuration
 
+### Database and Table Configuration file
+
+The file of .env.example becomes the example how the environment variable should be set in the server. To add a database and tables, simply add these env variables. Foreign Key is generated from id of previousTable. 
+
+e.g if there are table1, table2, table3 in 1 database, then :
+foreign key table2 = id table1,
+foreign key table3 = id table2.
+
+Tables with no foreign key name configuration will not be inserted automatically by the application.
+
+```bash
+  DB_ID=antigen                       # id for database used in application
+  DB_HOST=localhost                   # database host server
+  DB_PORT=3306                        # database port
+  DB_NAME=db_name                     # database name
+  DB_USER=db_user                     # database user 
+  DB_PASSWORD=db_password             # database password
+  DB_CONNECTION_LIMIT=5               # database connection will be reserved in a pool
+  DB_PATIENT=patient                  # database table 1 id will be used in app
+  DB_PATIENT_TABLE=db_patient         # database table 1 name
+  DB_SPECIMEN=specimen                # database table 2 id will be used in app
+  DB_SPECIMEN_TABLE=db_specimen       # database table 2 name
+  DB_SPECIMEN_FOREIGN_KEY=id_pasien   # database table 2 foreign key column name
+```
+
+You need to add also these configuration in /src/config/index.ts file in the db array.
+
+```javascript
+  db: [
+    {
+      id: process.env.DB_ID,
+      host: process.env.DB_HOST,
+      port: parseInt(String(process.env.DB_PORT), 10),
+      database: process.env.DB_NAME,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
+      tables: [
+        {
+          kind: process.env.DB_PATIENT,
+          name: process.env.DB_PATIENT_TABLE,
+          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY,
+        },
+        {
+          kind: process.env.DB_SPECIMEN,
+          name: process.env.DB_SPECIMEN_TABLE,
+          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY,
+        },
+      ],
+    }
+  ]
+```
+
+### Sheet configuration file
+
 The columns in excel files being uploaded to XCS Translator will be mapped to database fields. You can configure what column mapped to what field in `sheetconfig.json` file. Please take a look on the sample provided in this repository and edit it to match your excel template specifications.
 
-The structure of configuration file:
+The structure of sheet configuration file:
 
 ```json
 [
