@@ -11,11 +11,7 @@
         {
           "col": "D",
           "title": "DATE OF BIRTH",
-          "constraints": {
-            "format": {
-              "pattern": "([12]\\d{3})-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])"
-            }
-          }
+          "constraints": { "date": true }
         },
         {
           "col": "E",
@@ -26,34 +22,54 @@
         { "col": "G", "title": "ADDRESS" },
         {
           "col": "H",
-          "title": "RESULT",
+          "title": "SPECIMEN TYPE",
           "constraints": { "presence": true }
+        },
+        {
+          "col": "J",
+          "title": "COLLECTION DATE",
+          "constraints": { "date": true }
+        },
+        {
+          "col": "J",
+          "title": "RESULT"
         }
       ]
+    },
+    "database": {
+      "host": "db_host",
+      "port": 3306,
+      "user": "db_user",
+      "password": "db_password",
+      "dbName": "db_name",
+      "connectionLimit": 5
     },
     "destinations": [
       {
         "kind": "patient",
+        "table": { "name": "db_patient" },
         "columns": [
           { "col": "B", "name": "name" },
           { "col": "C", "name": "id_no" },
           { "col": "D", "name": "birth_date" },
           { "col": "E", "name": "gender" },
           { "col": "F", "name": "phone" },
-          { "col": "G", "name": "address" },
-          { "col": "H", "name": "result" }
+          { "col": "G", "name": "address" }
         ]
       },
       {
         "kind": "specimen",
+        "table": {
+          "name": "db_specimen",
+          "foreignKey": {
+            "sourceIndex": 0,
+            "field": "patient_id"
+          }
+        },
         "columns": [
-          { "col": "B", "name": "name" },
-          { "col": "C", "name": "id_no" },
-          { "col": "D", "name": "birth_date" },
-          { "col": "E", "name": "gender" },
-          { "col": "F", "name": "phone" },
-          { "col": "G", "name": "address" },
-          { "col": "H", "name": "result" }
+          { "col": "H", "name": "specimen_type" },
+          { "col": "I", "name": "collection_date" },
+          { "col": "J", "name": "result" }
         ]
       }
     ]

@@ -20,6 +20,14 @@
 import fs from 'fs'
 import path from 'path'
 
+export interface Table {
+  name: string
+  foreignKey?: {
+    field: string
+    sourceIndex: number // index of table in the destinations array which will be the source of value
+  }
+}
+
 export interface SheetConfig {
   type: string
   source: {
@@ -31,16 +39,21 @@ export interface SheetConfig {
       constraints?: any
     }[]
   }
+  database: {
+    host: string
+    port: number
+    user: string
+    password: string
+    dbName: string
+    connectionLimit: number
+  }
   destinations: {
     kind: string
+    table: Table
     columns: { col: string; name: string }[]
   }[]
 }
 
-const rawConfig: SheetConfig[] = JSON.parse(
+export const sheetsConfig: SheetConfig[] = JSON.parse(
   fs.readFileSync(path.join(__dirname, '../../sheetconfig.json'), 'utf-8'),
 )
-
-export const sheetConfig = (): SheetConfig[] => {
-  return rawConfig
-}

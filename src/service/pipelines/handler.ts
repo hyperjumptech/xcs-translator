@@ -21,7 +21,7 @@ import fs from 'fs'
 import path from 'path'
 import { promisify } from 'util'
 import { NextFunction, Request, Response } from 'express'
-import { sheetConfig } from '../../config'
+import { sheetsConfig } from '../../config'
 import { AppError, commonHTTPErrors } from '../../internal/app-error'
 
 const readDir = promisify(fs.readdir)
@@ -39,7 +39,7 @@ interface pipeline {
 export async function index(req: Request, res: Response, next: NextFunction) {
   const storageDir = path.join(__dirname, '../../../storage')
   const pipelines: pipeline[] = []
-  for (let sheet of sheetConfig()) {
+  for (let sheet of sheetsConfig) {
     const { type } = sheet
     try {
       const excelInProgress = await readDir(`${storageDir}/${type}/excel/`)

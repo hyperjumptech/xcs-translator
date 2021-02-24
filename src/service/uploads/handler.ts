@@ -28,7 +28,7 @@ import { AppError, commonHTTPErrors } from '../../internal/app-error'
 import PubSub from '../../internal/pubsub'
 import { logger } from '../../internal/logger'
 import { validateColumns, validateValues } from '../../internal/sheetValidator'
-import { sheetConfig, SheetConfig, cfg, Table, DbConfig } from '../../config'
+import { sheetsConfig, Table } from '../../config'
 import { getConnection } from '../../database/mariadb'
 
 const pubsub = new PubSub()
@@ -104,14 +104,13 @@ pubsub.subscribe('onFileHashed', async ({ message, _ }: any) => {
   const worksheetname = workbook.SheetNames[0]
   const worksheet = workbook.Sheets[worksheetname]
 
-  // validate columns header
-  let sheet = {} as SheetConfig
-  const sheetArr = sheetConfig()
-  for (const sht of sheetArr) {
-    if (sht.type === type) {
-      sheet = sht
-    }
+  let sheet = sheetsConfig.find(cfg => cfg.type === type)
+
+  if (!sheet) {
+    throw new Error(`Sheet type '${type}' does not exist in sheetconfig.json`)
   }
+
+  // validate columns header
   const isColumnsValid = validateColumns(
     sheet.source.columns,
     sheet.source.headerRow,
@@ -216,29 +215,34 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
     if (!conn) {
       throw new Error('Database connection is failed')
     }
-    const sqlStatementsFile = await fsReadFile(filePath)
-    const mappedData = JSON.parse(String(sqlStatementsFile))
+    const jsonFile = await fsReadFile(filePath, 'utf-8')
+    const mappedData = JSON.parse(jsonFile)
 
     // generate sql statement
     conn?.beginTransaction()
     await Promise.all(
       mappedData.map(async (data: any) => {
         const kinds = Object.keys(data)
-        let foreignKeyValue: string | undefined = undefined
+
+        let insertIds: unknown[] = []
 
         for (const kind of kinds) {
-          let foreignKeyName: string | undefined = undefined
           const value = data[kind]
-          const tabel = getTable(type, kind)
-          const tableName = tabel?.name || ''
+          const table = getTable(type, kind)
+          const tableName = table?.name || ''
           const getColumnInformationQuery = (tableName: string): string =>
             `SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE, IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '${tableName}' AND EXTRA != 'auto_increment'`
           const tableInfo = await conn?.query(
             getColumnInformationQuery(tableName || ''),
           )
-          foreignKeyName = tabel?.foreignkey || ''
           const sqlData = fillUnmappedColumnToJSON(tableInfo, value)
-          delete sqlData[foreignKeyName]
+          let foreignKeyName: string | undefined
+          let foreignKeyValue: any
+          if (table?.foreignKey) {
+            foreignKeyName = table.foreignKey.field
+            foreignKeyValue = insertIds[table.foreignKey.sourceIndex]
+            delete sqlData[foreignKeyName]
+          }
           const tableColumns = Object.keys(sqlData).join(', ')
           const tableValues = Object.values(sqlData)
             .map(normalizeSQLValue)
@@ -253,7 +257,7 @@ pubsub.subscribe('onConvertedToJSON', async ({ message, _ }: any) => {
           })
 
           const res = await conn?.query(query)
-          foreignKeyValue = res.insertId // set previous table insert id as next table foreign key
+          insertIds.push(res.insertId) // save current table insert id so it can be used by later tables
         }
       }),
     )
@@ -369,13 +373,11 @@ function removeExtension(fileName: string): string[] {
 }
 
 function getTable(type: string, kind: string): Table | undefined {
-  const db: DbConfig | undefined = cfg.db.find(database => database.id === type)
-  let tbl: Table | undefined = {} as Table
-  if (db) {
-    tbl = db.tables.find(tabel => tabel.kind === kind)
-  }
+  const table = sheetsConfig
+    .find(cfg => cfg.type === type)
+    ?.destinations.find(dest => dest.kind === kind)?.table
 
-  return tbl
+  return table
 }
 
 function normalizeSQLValue(value: any): any {

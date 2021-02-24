@@ -36,58 +36,9 @@ You need [Node.js](https://nodejs.org/en/) v10.22 or greater to be available in 
 
 ## Configuration
 
-### Database and Table Configuration file
+### Environment variables
 
-The file of .env.example becomes the example how the environment variable should be set in the server. To add a database and tables, simply add these env variables. Foreign Key is generated from id of previousTable. 
-
-e.g if there are table1, table2, table3 in 1 database, then :
-foreign key table2 = id table1,
-foreign key table3 = id table2.
-
-Tables with no foreign key name configuration will not be inserted automatically by the application.
-
-```bash
-  DB_ID=antigen                       # id for database used in application
-  DB_HOST=localhost                   # database host server
-  DB_PORT=3306                        # database port
-  DB_NAME=db_name                     # database name
-  DB_USER=db_user                     # database user 
-  DB_PASSWORD=db_password             # database password
-  DB_CONNECTION_LIMIT=5               # database connection will be reserved in a pool
-  DB_PATIENT=patient                  # database table 1 id should be the same as 'kind' column name in sheetconfig.json
-  DB_PATIENT_TABLE=db_patient         # database table 1 name
-  DB_SPECIMEN=specimen                # database table 2 id should be the same as 'kind' column name in sheetconfig.json
-  DB_SPECIMEN_TABLE=db_specimen       # database table 2 name
-  DB_SPECIMEN_FOREIGN_KEY=id_pasien   # database table 2 foreign key column name
-```
-
-You need to add also these configuration in /src/config/index.ts file in the db array.
-
-```javascript
-  db: [
-    {
-      id: process.env.DB_ID,
-      host: process.env.DB_HOST,
-      port: parseInt(String(process.env.DB_PORT), 10),
-      database: process.env.DB_NAME,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      connectionLimit: parseInt(String(process.env.DB_CONNECTION_LIMIT), 10),
-      tables: [
-        {
-          kind: process.env.DB_PATIENT,
-          name: process.env.DB_PATIENT_TABLE,
-          foreignkey: process.env.DB_PATIENT_FOREIGN_KEY,
-        },
-        {
-          kind: process.env.DB_SPECIMEN,
-          name: process.env.DB_SPECIMEN_TABLE,
-          foreignkey: process.env.DB_SPECIMEN_FOREIGN_KEY,
-        },
-      ],
-    }
-  ]
-```
+The file of .env.example becomes the example how the environment variable should be set in the server.
 
 ### Sheet configuration file
 
@@ -115,9 +66,18 @@ The structure of sheet configuration file:
         // ...
       ]
     },
+    "database": {
+      "host": "db_host",
+      "port": 3306,
+      "user": "db_user",
+      "password": "db_password",
+      "dbName": "db_name",
+      "connectionLimit": 5
+    },
     "destinations": [
       {
         "kind": "patient",
+        "table": { "name": "db_patient" },
         "columns": [
           { "col": "A", "name": "name" },
           { "col": "B", "name": "diagnose" }
@@ -125,7 +85,14 @@ The structure of sheet configuration file:
         ]
       },
       {
-        "kind": "specimen"
+        "kind": "specimen",
+        "table": {
+          "name": "db_specimen",
+          "foreignKey": {
+            "sourceIndex": 0,
+            "field": "patient_id"
+          }
+        }
         // ...
       }
     ]
@@ -188,11 +155,27 @@ Common example of adding constraints:
   }
   ```
 
+### Database configuration
+
+Provide these value in database configuration section for each data type:
+
+- `host`
+- `port`
+- `user`
+- `password`
+- `dbName`
+- `connectionLimit`
+
 ### Mapping from excel to target database table fields
 
 Data from one excel file can be inserted to multiple tables in one database, and you can pick what columns to be mapped to each table.
 
 - `kind`: (**required**) is the identifier for the table (the table name will be fetched from environment variable)
+- `table`: (**required**)
+  - `name`: (**required**) is database table name
+  - `foreignKey`: (**optional** only if this table contains foreign key from previous table in the list)
+    - `sourceIndex`: (**required**) is index of source table in the list
+    - `field`: (**required**) is the FK field name in this table
 - `columns`: (**required**)
   - `col`: (**required**) the source column in excel template (A, B, C, ...)
   - `name`: (**required**) the target field in database table
