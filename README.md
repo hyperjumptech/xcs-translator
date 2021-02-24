@@ -54,9 +54,9 @@ Tables with no foreign key name configuration will not be inserted automatically
   DB_USER=db_user                     # database user 
   DB_PASSWORD=db_password             # database password
   DB_CONNECTION_LIMIT=5               # database connection will be reserved in a pool
-  DB_PATIENT=patient                  # database table 1 id will be used in app
+  DB_PATIENT=patient                  # database table 1 id should be the same as 'kind' column name in sheetconfig.json
   DB_PATIENT_TABLE=db_patient         # database table 1 name
-  DB_SPECIMEN=specimen                # database table 2 id will be used in app
+  DB_SPECIMEN=specimen                # database table 2 id should be the same as 'kind' column name in sheetconfig.json
   DB_SPECIMEN_TABLE=db_specimen       # database table 2 name
   DB_SPECIMEN_FOREIGN_KEY=id_pasien   # database table 2 foreign key column name
 ```
